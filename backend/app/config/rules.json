@@ -1,0 +1,95 @@
+{
+  "chinese": {
+    "method_name": [
+      "方法名?叫?(\\w+)",
+      "函数名?叫?(\\w+)",
+      "\\b(\\w+)\\s*方法",
+      "\\b(\\w+)\\s*函数",
+      "\\b(\\w+)\\(.*?\\)"
+    ],
+    "parameters": [
+      "参数\\s*(\\w+)",
+      "传入\\s*(\\w+)",
+      "\\b(\\w+)\\s*[:=]",
+      "\\b(\\w+)\\s*是",
+      "接受\\s*(\\w+)"
+    ],
+    "parameter_types": [
+      "(\\w+)\\s*[:：]\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*是\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*类型为\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*的\\s*类型是\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)"
+    ],
+    "return_type": [
+      "返回值?是?(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)",
+      "返回\\s*类型为\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)",
+      "返回\\s*的\\s*类型是\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)"
+    ],
+    "constraints": [
+      "(\\w+)\\s*不能是\\s*null",
+      "(\\w+)\\s*不能为空",
+      "(\\w+)\\s*必须是\\s*(\\w+)",
+      "(\\w+)\\s*范围\\s*[为在]\\s*(\\d+)\\s*到\\s*(\\d+)",
+      "(\\w+)\\s*长度\\s*[为在]\\s*(\\d+)\\s*到\\s*(\\d+)",
+      "(\\w+)\\s*必须大于\\s*(\\d+)",
+      "(\\w+)\\s*必须小于\\s*(\\d+)",
+      "(\\w+)\\s*不能小于\\s*(\\d+)",
+      "(\\w+)\\s*不能大于\\s*(\\d+)"
+    ],
+    "expectations": [
+      "预期\\s*(.+)",
+      "期望\\s*(.+)",
+      "应该\\s*(.+)",
+      "返回\\s*(.+)",
+      "结果\\s*(.+)"
+    ]
+  },
+  "english": {
+    "method_name": [
+      "method\\s*name\\s*is\\s*(\\w+)",
+      "function\\s*name\\s*is\\s*(\\w+)",
+      "the\\s*method\\s*(\\w+)",
+      "the\\s*function\\s*(\\w+)",
+      "\\b(\\w+)\\s*method",
+      "\\b(\\w+)\\s*function",
+      "\\b(\\w+)\\(.*?\\)"
+    ],
+    "parameters": [
+      "parameter\\s*(\\w+)",
+      "param\\s*(\\w+)",
+      "input\\s*(\\w+)",
+      "accepts\\s*(\\w+)",
+      "\\b(\\w+)\\s*[:=]",
+      "\\b(\\w+)\\s*is"
+    ],
+    "parameter_types": [
+      "(\\w+)\\s*[:=]\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*is\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*type\\s*is\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)",
+      "(\\w+)\\s*of\\s*type\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+)"
+    ],
+    "return_type": [
+      "return\\s*type\\s*is\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)",
+      "returns?\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)",
+      "the\\s*return\\s*type\\s*is\\s*(String|int|float|double|boolean|char|byte|short|long|Integer|Double|Boolean|Character|Byte|Short|Long|List|Set|Map|\\w+\\[\\]|\\w+|void)"
+    ],
+    "constraints": [
+      "(\\w+)\\s*cannot\\s*be\\s*null",
+      "(\\w+)\\s*cannot\\s*be\\s*empty",
+      "(\\w+)\\s*must\\s*be\\s*(\\w+)",
+      "(\\w+)\\s*range\\s*(is|from)\\s*(\\d+)\\s*to\\s*(\\d+)",
+      "(\\w+)\\s*length\\s*(is|from)\\s*(\\d+)\\s*to\\s*(\\d+)",
+      "(\\w+)\\s*must\\s*be\\s*greater\\s*than\\s*(\\d+)",
+      "(\\w+)\\s*must\\s*be\\s*less\\s*than\\s*(\\d+)",
+      "(\\w+)\\s*cannot\\s*be\\s*less\\s*than\\s*(\\d+)",
+      "(\\w+)\\s*cannot\\s*be\\s*greater\\s*than\\s*(\\d+)"
+    ],
+    "expectations": [
+      "expect\\s*(.+)",
+      "expected\\s*(.+)",
+      "should\\s*(.+)",
+      "returns?\\s*(.+)",
+      "result\\s*(.+)"
+    ]
+  }
+}

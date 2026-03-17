@@ -1,0 +1,311 @@
+# LLM提示词配置
+llm:
+  # 主提示词模板：解析需求为结构化信息
+  parse_requirement_prompt: |
+    You are an expert in Java testing. Parse the following Java requirement into structured test case information.
+
+    # Requirement to Parse (READ CAREFULLY - Extract ONLY from this text)
+    ${cleaned_text}
+
+    # Example Format Reference (for structure ONLY, do NOT copy content)
+    ${examples}
+
+
+    # Output JSON (strict format)
+    {
+      "method_name": "string",
+      "parameters": [
+        {
+          "name": "string",
+          "type": "string",
+          "constraints": [
+            {
+              "type": "string",
+              "value": "string"
+            }
+          ]
+        }
+      ],
+      "return_type": "string",
+      "expectations": ["string"],
+      "is_constructed": {
+        "method_name": boolean,
+        "parameters": boolean,
+        "return_type": boolean
+      }
+    }
+
+    # CRITICAL RULES (MUST FOLLOW EXACTLY):
+
+    ## Rule 1: Extract and Construct Information
+    - FIRST: Extract ALL information explicitly mentioned in the "Requirement to Parse" section
+    - SECOND: If information is NOT explicitly mentioned, construct reasonable values based on the requirement context
+    - DO NOT invent information that has NO relation to the requirement
+    - Example: If requirement says "calculate price", you can infer method_name="calculatePrice"
+    - Example: If requirement says "price is double", you can infer parameter type="double"
+    - Example: If requirement says "must be greater than 0", you can infer constraint type="min"
+
+    ## Rule 2: Method Name Extraction
+    - Look for patterns like: "方法名", "函数名", "method name", "function name", followed by method name
+    - Look for patterns like: "方法X", "函数X", "methodX", "functionX" (where X is the method name)
+    - If method name is mentioned but not explicitly named, infer from context (e.g., "calculate price" -> "calculatePrice")
+    - If no method name can be inferred, set method_name="" and mark is_constructed.method_name=true
+
+    ## Rule 3: Parameter Extraction
+    - Look for patterns like: "参数X是Y类型", "parameterX is type Y", "paramX: Y"
+    - Look for parameter names followed by type information
+    - Extract parameter names and types when mentioned or can be reasonably inferred
+    - If parameter is mentioned without type, infer type from context (e.g., "price" -> "double", "count" -> "int")
+    - If no parameters are mentioned or can be inferred, set parameters=[] and mark is_constructed.parameters=true
+
+    ## Rule 4: Constraint Extraction
+    - Look for constraint patterns like: "X必须大于Y", "X必须小于Y", "X范围Y到Z", "X长度Y到Z"
+    - Extract constraints when explicitly mentioned for each parameter
+    - Infer constraints from context when reasonable (e.g., "price" -> min=0.0, "count" -> min=1)
+    - If no constraints are mentioned or can be inferred, set constraints=[] for each parameter
+
+    ## Rule 5: Return Type Extraction
+    - Look for patterns like: "返回值是X类型", "return type is X", "返回X"
+    - Extract return type when explicitly mentioned
+    - Infer return type from context when reasonable (e.g., "calculate" -> "double", "validate" -> "boolean")
+    - If no return type can be inferred, set return_type="" and mark is_constructed.return_type=true
+
+    ## Rule 6: Expectations Extraction
+    - Look for patterns like: "预期X", "期望X", "expectX", "shouldX"
+    - Extract expectations when explicitly mentioned
+    - Infer reasonable expectations based on the requirement context
+    - If no expectations are mentioned or can be inferred, set expectations=[]
+
+    ## Rule 7: Java Data Types
+    - Use standard Java data types: String, int, double, boolean, char, byte, short, long, float, List, Set, Map, etc.
+    - Infer appropriate types based on parameter names and context (e.g., "price/amount" -> "double", "count/quantity" -> "int", "isValid" -> "boolean")
+
+    ## Rule 8: is_constructed Field
+    - Set is_constructed.method_name=false if method_name is explicitly mentioned
+    - Set is_constructed.method_name=true if method_name is inferred/constructed
+    - Set is_constructed.parameters=false if parameters are explicitly mentioned
+    - Set is_constructed.parameters=true if parameters are inferred/constructed
+    - Set is_constructed.return_type=false if return_type is explicitly mentioned
+    - Set is_constructed.return_type=true if return_type is inferred/constructed
+
+    ## Rule 9: Output Format
+    - Output valid JSON only
+    - No explanations, no comments, no extra text
+    - Match the JSON structure exactly
+    - Use English only for field names and values
+
+  # 生成 Java 单元测试代码的提示词模板（常规类）
+  generate_test_prompt: |
+    You are an expert in Java software testing and JUnit 5. Your task is to generate comprehensive Java unit test code based on the provided structured information.
+
+    # Structured Information
+    - Class name: ${class_name}
+    - Method name: ${method_name}
+    - Parameters: ${parameters}
+    - Return type: ${return_type}
+    - Expectations: ${expectations}
+
+    # Code Structure Information (if provided)
+    ${code_structure}
+
+    # Requirements
+    1. Generate a complete JUnit 5 test class
+    2. Include the package declaration at the top of the file if package information is provided
+    3. Use appropriate imports (JUnit 5 annotations and assertions, and any other necessary imports for the class being tested)
+    4. Generate test methods with descriptive names that reflect the test scenarios
+    5. Include setup and teardown methods if necessary
+    6. Use mocking for dependencies if needed
+    7. Generate assertions based on the expectations
+    8. Follow Java naming conventions (test class name should be ${class_name}Test)
+    9. Make the code readable and well-structured
+    10. Output only the Java code, no explanations
+    11. IMPORTANT: In the test method, you MUST call the method ${method_name} with appropriate test values based on the parameters and constraints
+    12. CRITICAL: Always use the actual class name extracted from the file context for creating instances and calling methods
+    13. CRITICAL: Do not create non-existent classes like 'TestClass'. Use the real class name from the file context
+    14. CRITICAL: For example, if the class name is 'Calculator', create an instance like 'private Calculator calculator = new Calculator();' and call methods like 'calculator.calculateSum(a, b);'
+
+    # Example Output Format
+    ```java
+    # If package information is provided:
+    package ${package_name};
+
+    import org.junit.jupiter.api.BeforeEach;
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.*;
+    // Add any other necessary imports for the class being tested
+
+    public class ${class_name}Test {
+        private ${class_name} instance;
+
+        @BeforeEach
+        void setUp() {
+            instance = new ${class_name}();
+        }
+
+        @Test
+        void test${MethodName}() {
+            // Test setup
+            // Method call
+            // Assertions
+        }
+    }
+    ```
+
+    # Output
+    Generate the complete Java unit test code based on the structured information. Make sure the code is syntactically correct and follows best practices for unit testing.
+
+  # 生成 Java 单元测试代码的提示词模板（接口类）
+  generate_test_prompt_interface: |
+    You are an expert in Java software testing and JUnit 5. Your task is to generate comprehensive Java unit test code based on the provided structured information.
+
+    # Structured Information
+    - Interface name: ${class_name}
+    - Method name: ${method_name}
+    - Parameters: ${parameters}
+    - Return type: ${return_type}
+    - Expectations: ${expectations}
+
+    # Code Structure Information (if provided)
+    ${code_structure}
+
+    # Requirements
+    1. Generate a complete JUnit 5 test class
+    2. Include the package declaration at the top of the file if package information is provided
+    3. Use appropriate imports (JUnit 5 annotations and assertions, and any other necessary imports for the class being tested)
+    4. Generate test methods with descriptive names that reflect the test scenarios
+    5. Include setup and teardown methods if necessary
+    6. Use mocking for dependencies if needed
+    7. Generate assertions based on the expectations
+    8. Follow Java naming conventions (test class name should be ${class_name}Test)
+    9. Make the code readable and well-structured
+    10. Output only the Java code, no explanations
+    11. IMPORTANT: In the test method, you MUST call the method ${method_name} with appropriate test values based on the parameters and constraints
+    12. CRITICAL: The class ${class_name} is an INTERFACE. You MUST NOT instantiate it directly with 'new ${class_name}()'.
+    13. CRITICAL: Instead, use one of the following approaches:
+        a. If implementation classes are visible in the code structure, use the first implementation class you find
+        b. If no implementation classes are visible, use a mocking framework like Mockito to create a mock instance
+        c. Always declare the variable with the interface type, not the implementation type
+    14. CRITICAL: INTERFACE EXAMPLE WITH IMPLEMENTATION: If the interface is 'Calculator' and you find an implementation 'CalculatorImpl', create an instance like 'private Calculator calculator = new CalculatorImpl();'
+    15. CRITICAL: INTERFACE EXAMPLE WITHOUT IMPLEMENTATION: If the interface is 'Calculator' and no implementations are found, add Mockito import and create an instance like 'private Calculator calculator = Mockito.mock(Calculator.class);'
+    16. CRITICAL: The test code should always use the interface type for the variable declaration while instantiating the concrete implementation if available.
+
+    # Example Output Format
+    ```java
+    # If package information is provided:
+    package ${package_name};
+
+    import org.junit.jupiter.api.BeforeEach;
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.*;
+    // Add any other necessary imports for the class being tested
+
+    public class ${class_name}Test {
+        private ${class_name} instance;
+
+        @BeforeEach
+        void setUp() {
+            // For interfaces with implementations:
+            // instance = new ${class_name}Impl(); // Use the actual implementation class
+            
+            // For interfaces without implementations (using Mockito):
+            // import org.mockito.Mockito;
+            // instance = Mockito.mock(${class_name}.class);
+        }
+
+        @Test
+        void test${MethodName}() {
+            // Test setup
+            // Method call
+            // Assertions
+        }
+    }
+    ```
+
+    # Output
+    Generate the complete Java unit test code based on the structured information. Make sure the code is syntactically correct and follows best practices for unit testing.
+
+  # 生成 Java 空方法代码的提示词模板
+  generate_empty_method_prompt: |
+    You are an expert in Java development. Generate an empty method implementation based on the following information.
+
+    # Method Information
+    Method Name: ${method_name}
+    Parameters: ${parameters}
+    Return Type: ${return_type}
+
+    # File Context (if available)
+    ${file_content}...
+
+    # Requirements
+    1. Generate only the method implementation, no class definition
+    2. Use proper Java syntax
+    3. For methods with return type, return a suitable default value or throw UnsupportedOperationException
+    4. For void methods, leave the body empty
+    5. Include proper parameter names and types
+    6. The method signature must match exactly what would be called by test code
+
+    # Example
+    Input:
+    Method Name: calculateSum
+    Parameters: [{"name": "a", "type": "int"}, {"name": "b", "type": "int"}]
+    Return Type: int
+
+    Output:
+    public int calculateSum(int a, int b) {
+        throw new UnsupportedOperationException("Method not implemented yet");
+    }
+
+    Input:
+    Method Name: printMessage
+    Parameters: [{"name": "message", "type": "String"}]
+    Return Type: void
+
+    Output:
+    public void printMessage(String message) {
+        // Implementation to be added
+    }
+
+    # Your Output
+    Generate the empty method implementation based on the provided information.
+
+  # 修复编译错误的提示词模板
+  fix_compilation_error_prompt: |
+    You are an expert in Java development, debugging, and JUnit 5. Your task is to fix the compilation errors in the provided test code based on the error message.
+
+    # Test Code with Errors
+    ```java
+    ${code}
+    ```
+
+    # Compilation Error Message
+    ${error_message}
+
+    # Code Structure (if available)
+    ${code_structure}
+
+    # Class Information
+    Class Name: ${current_class_name}
+    Is Interface: ${is_interface_file}
+
+    # Requirements
+    1. Analyze the compilation error message carefully
+    2. Fix all compilation errors in the test code
+    3. Ensure the fixed code compiles successfully
+    4. Maintain the original functionality of the test code
+    5. Include all necessary import statements
+    6. Return the complete fixed test code
+    7. Do not include any explanations, just the fixed code
+    8. Follow Java naming conventions
+    9. Use proper JUnit 5 annotations and assertions
+
+    # Common Compilation Errors to Look For
+    - Missing import statements
+    - Syntax errors (missing semicolons, braces, etc.)
+    - Incorrect method signatures
+    - Missing class or variable declarations
+    - Incorrect package declarations
+    - Type mismatches
+    - Unused imports or variables
+
+    # Your Output
+    Generate the complete fixed test code with all compilation errors resolved.

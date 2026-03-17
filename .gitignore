@@ -1,0 +1,67 @@
+# ==============================================
+# 全局通用
+# ==============================================
+.idea/
+.idea_modules/
+.gradle/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+*.log
+*.tmp
+*.temp
+.vscode/
+.venv
+venv/
+ENV/
+env/
+out/
+build/
+target/
+*.class
+
+# ==============================================
+# Python 后端 (FastAPI)
+# ==============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.env.*
+backend/venv/
+backend/.env
+backend/.env.*
+backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
+backend/*.db
+backend/*.sqlite3
+
+# ==============================================
+# IDEA 插件端 (Gradle + Java)
+# ==============================================
+idea-plugin/build/
+idea-plugin/out/
+idea-plugin/.idea/
+idea-plugin/*.iml
+idea-plugin/gradle/
+idea-plugin/gradlew
+idea-plugin/gradlew.bat
+idea-plugin/.run/
+
+# ==============================================
+# 系统文件
+# ==============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,492 @@
+{
+  "chinese": [
+    {
+      "natural_language": "方法叫setPaint，传入的color不能是null，width必须大于0，返回值是boolean类型",
+      "structured_result": {
+        "method_name": "setPaint",
+        "parameters": [
+          {
+            "name": "color",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_null",
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "name": "width",
+            "type": "int",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "返回boolean类型结果"
+        ]
+      }
+    },
+    {
+      "natural_language": "函数名为calculateSum，接受两个整数参数a和b，返回它们的和",
+      "structured_result": {
+        "method_name": "calculateSum",
+        "parameters": [
+          {
+            "name": "a",
+            "type": "int",
+            "constraints": []
+          },
+          {
+            "name": "b",
+            "type": "int",
+            "constraints": []
+          }
+        ],
+        "return_type": "int",
+        "expectations": [
+          "返回两个整数的和"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法validateUser，参数username长度在5到20之间，password不能为空，返回布尔值表示验证是否成功",
+      "structured_result": {
+        "method_name": "validateUser",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "length",
+                "value": "5-20"
+              }
+            ]
+          },
+          {
+            "name": "password",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_empty",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "返回验证是否成功的布尔值"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法getProductById，参数id是long类型，返回Product对象",
+      "structured_result": {
+        "method_name": "getProductById",
+        "parameters": [
+          {
+            "name": "id",
+            "type": "long",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "return_type": "Product",
+        "expectations": [
+          "返回指定id的产品对象"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法calculateDiscount，参数customerType是String类型，purchaseAmount是double类型，customerType只能是REGULAR、PREMIUM或VIP，purchaseAmount必须大于等于0，返回折扣百分比",
+      "structured_result": {
+        "method_name": "calculateDiscount",
+        "parameters": [
+          {
+            "name": "customerType",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "enum",
+                "value": "REGULAR, PREMIUM, VIP"
+              }
+            ]
+          },
+          {
+            "name": "purchaseAmount",
+            "type": "double",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0.0"
+              }
+            ]
+          }
+        ],
+        "return_type": "double",
+        "expectations": [
+          "根据客户类型和购买金额返回折扣百分比"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法sendEmail，参数to是String类型，subject是String类型，body是String类型，to不能为空，subject长度不能超过100字符",
+      "structured_result": {
+        "method_name": "sendEmail",
+        "parameters": [
+          {
+            "name": "to",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_empty",
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "name": "subject",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "max_length",
+                "value": "100"
+              }
+            ]
+          },
+          {
+            "name": "body",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "返回邮件是否发送成功"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法calculatePrice，参数price是double类型，quantity是int类型，price必须大于0，quantity必须大于等于1，返回总价",
+      "structured_result": {
+        "method_name": "calculatePrice",
+        "parameters": [
+          {
+            "name": "price",
+            "type": "double",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0.0"
+              }
+            ]
+          },
+          {
+            "name": "quantity",
+            "type": "int",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "return_type": "double",
+        "expectations": [
+          "返回价格乘以数量的总价"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法isValidEmail，参数email是String类型，返回布尔值表示邮箱是否有效",
+      "structured_result": {
+        "method_name": "isValidEmail",
+        "parameters": [
+          {
+            "name": "email",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "返回邮箱格式是否有效的布尔值"
+        ]
+      }
+    },
+    {
+      "natural_language": "方法getUserList，参数role是String类型，返回用户列表",
+      "structured_result": {
+        "method_name": "getUserList",
+        "parameters": [
+          {
+            "name": "role",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "List<User>",
+        "expectations": [
+          "返回指定角色的用户列表"
+        ]
+      }
+    }
+  ],
+  "english": [
+    {
+      "natural_language": "The method is called setPaint, input color cannot be null, width must be greater than 0, and return type is boolean",
+      "structured_result": {
+        "method_name": "setPaint",
+        "parameters": [
+          {
+            "name": "color",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_null",
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "name": "width",
+            "type": "int",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0"
+              }
+            ]
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "returns boolean result"
+        ]
+      }
+    },
+    {
+      "natural_language": "Function name is calculateSum, accepts two integer parameters a and b, returns their sum",
+      "structured_result": {
+        "method_name": "calculateSum",
+        "parameters": [
+          {
+            "name": "a",
+            "type": "int",
+            "constraints": []
+          },
+          {
+            "name": "b",
+            "type": "int",
+            "constraints": []
+          }
+        ],
+        "return_type": "int",
+        "expectations": [
+          "returns sum of two integers"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method validateUser, parameter username length is between 5 and 20, password cannot be empty, returns boolean indicating whether validation is successful",
+      "structured_result": {
+        "method_name": "validateUser",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "length",
+                "value": "5-20"
+              }
+            ]
+          },
+          {
+            "name": "password",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_empty",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "returns boolean indicating validation success"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method getProductById, parameter id is long type, returns Product object",
+      "structured_result": {
+        "method_name": "getProductById",
+        "parameters": [
+          {
+            "name": "id",
+            "type": "long",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "return_type": "Product",
+        "expectations": [
+          "returns product object with specified id"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method calculateDiscount, parameter customerType is String type, purchaseAmount is double type, customerType can only be REGULAR, PREMIUM or VIP, purchaseAmount must be greater than or equal to 0, returns discount percentage",
+      "structured_result": {
+        "method_name": "calculateDiscount",
+        "parameters": [
+          {
+            "name": "customerType",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "enum",
+                "value": "REGULAR, PREMIUM, VIP"
+              }
+            ]
+          },
+          {
+            "name": "purchaseAmount",
+            "type": "double",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0.0"
+              }
+            ]
+          }
+        ],
+        "return_type": "double",
+        "expectations": [
+          "returns discount percentage based on customer type and purchase amount"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method sendEmail, parameter to is String type, subject is String type, body is String type, to cannot be empty, subject length cannot exceed 100 characters",
+      "structured_result": {
+        "method_name": "sendEmail",
+        "parameters": [
+          {
+            "name": "to",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "not_empty",
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "name": "subject",
+            "type": "String",
+            "constraints": [
+              {
+                "type": "max_length",
+                "value": "100"
+              }
+            ]
+          },
+          {
+            "name": "body",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "returns whether email was sent successfully"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method calculatePrice, parameter price is double type, quantity is int type, price must be greater than 0, quantity must be greater than or equal to 1, returns total price",
+      "structured_result": {
+        "method_name": "calculatePrice",
+        "parameters": [
+          {
+            "name": "price",
+            "type": "double",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "0.0"
+              }
+            ]
+          },
+          {
+            "name": "quantity",
+            "type": "int",
+            "constraints": [
+              {
+                "type": "min",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "return_type": "double",
+        "expectations": [
+          "returns total price of price multiplied by quantity"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method isValidEmail, parameter email is String type, returns boolean value indicating whether email is valid",
+      "structured_result": {
+        "method_name": "isValidEmail",
+        "parameters": [
+          {
+            "name": "email",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "boolean",
+        "expectations": [
+          "returns boolean value indicating if email format is valid"
+        ]
+      }
+    },
+    {
+      "natural_language": "Method getUserList, parameter role is String type, returns user list",
+      "structured_result": {
+        "method_name": "getUserList",
+        "parameters": [
+          {
+            "name": "role",
+            "type": "String",
+            "constraints": []
+          }
+        ],
+        "return_type": "List<User>",
+        "expectations": [
+          "returns list of users with specified role"
+        ]
+      }
+    }
+  ]
+}
