@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.dialog;
+package com.smarttestgen.ideaplugin.util;
 
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;

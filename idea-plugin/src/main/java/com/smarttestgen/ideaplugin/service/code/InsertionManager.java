@@ -1,6 +1,5 @@
-package com.smarttestgen.ideaplugin.dialog;
+package com.smarttestgen.ideaplugin.service;
 
-import com.smarttestgen.ideaplugin.service.FileFinderService;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
