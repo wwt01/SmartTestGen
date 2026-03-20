@@ -2,15 +2,34 @@ import json
 import logging
 import yaml
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from pydantic import BaseModel, Field
 from app.config import settings
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class InMemoryHistory(BaseChatMessageHistory, BaseModel):
+    """In memory implementation of chat message history."""
+    messages: List[BaseMessage] = Field(default_factory=list)
+
+    def add_messages(self, messages: List[BaseMessage]) -> None:
+        """Add a list of messages to the store"""
+        self.messages.extend(messages)
+        # Keep only the last 20 messages to prevent token overflow
+        if len(self.messages) > 20:
+            self.messages = self.messages[-20:]
+
+    def clear(self) -> None:
+        self.messages = []
 
 
 class LLMService:
@@ -34,6 +53,11 @@ class LLMService:
 
         # 创建JSON输出解析器
         self.json_parser = JsonOutputParser()
+
+    def get_session_history(self, session_id: str) -> BaseChatMessageHistory:
+        if session_id not in self.store:
+            self.store[session_id] = InMemoryHistory()
+        return self.store[session_id]
 
     def _load_examples(self) -> Dict[str, Any]:
         """加载样例配置文件"""
@@ -117,7 +141,7 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
 
         return '\n'.join(formatted)
 
-    def get_structured_result(self, preprocessing_result: Dict[str, Any]) -> Dict[str, Any]:
+    def get_structured_result(self, preprocessing_result: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         """获取结构化解析结果 - 使用LangChain"""
         logger.info("Starting get_structured_result")
 
@@ -138,15 +162,47 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
 
         try:
             # 创建消息列表
-            messages = [
-                SystemMessage(content="You are an expert in Java software testing and natural language processing."),
-                HumanMessage(content=prompt)
-            ]
+            # messages = [
+            #     SystemMessage(content="You are an expert in Java software testing and natural language processing."),
+            #     HumanMessage(content=prompt)
+            # ]
+            # 创建消息列表
+            system_msg = SystemMessage(content="You are an expert in Java software testing and natural language processing.")
+            human_msg = HumanMessage(content=prompt)
 
-            # 调用LLM
-            response = self.llm.invoke(messages)
+            # # 调用LLM
+            # response = self.llm.invoke(messages)
+
+            if session_id:
+                # 使用带历史记录的调用
+                logger.info(f"Using session memory for session_id: {session_id}")
+
+                # 构造包含历史的 prompt 模板
+                prompt_template = ChatPromptTemplate.from_messages([
+                    ("system", "You are an expert in Java software testing and natural language processing."),
+                    MessagesPlaceholder(variable_name="history"),
+                    ("human", "{input}")
+                ])
+
+                chain = prompt_template | self.llm
+
+                with_message_history = RunnableWithMessageHistory(
+                    chain,
+                    self.get_session_history,
+                    input_messages_key="input",
+                    history_messages_key="history",
+                )
+
+                response = with_message_history.invoke(
+                    {"input": prompt},
+                    config={"configurable": {"session_id": session_id}}
+                )
+            else:
+                # 不使用历史记录的调用
+                messages = [system_msg, human_msg]
+                response = self.llm.invoke(messages)
+
             content = response.content
-
             logger.info(f"LLM call completed, raw response: {content}")
 
             # 移除markdown代码块标记
@@ -197,6 +253,7 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         code_structure = structured_data.get("code_structure", "")
         file_content = structured_data.get("file_content", "")
         empty_method_code = structured_data.get("empty_method_code", "")
+        session_id = structured_data.get("session_id", None)
 
         logger.info(f"Generating test code for method: {method_name}")
         logger.info(f"Parameters: {parameters}")
@@ -336,14 +393,42 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         # 使用LangChain调用LLM生成测试代码
         try:
             # 创建消息列表
-            messages = [
-                SystemMessage(content="You are an expert in Java software testing and JUnit 5."),
-                HumanMessage(content=prompt)
-            ]
-
+            # messages = [
+            #     SystemMessage(content="You are an expert in Java software testing and JUnit 5."),
+            #     HumanMessage(content=prompt)
+            # ]
+            system_msg = SystemMessage(content="You are an expert in Java software testing and JUnit 5.")
+            human_msg = HumanMessage(content=prompt)
             # 调用LLM
             logger.info("Calling LLM for test code generation with LangChain")
-            response = self.llm.invoke(messages)
+            # response = self.llm.invoke(messages)
+            if session_id:
+                # 使用带历史记录的调用
+                logger.info(f"Using session memory for session_id: {session_id}")
+
+                # 构造包含历史的 prompt 模板
+                prompt_template_obj = ChatPromptTemplate.from_messages([
+                    ("system", "You are an expert in Java software testing and JUnit 5."),
+                    MessagesPlaceholder(variable_name="history"),
+                    ("human", "{input}")
+                ])
+
+                chain = prompt_template_obj | self.llm
+
+                with_message_history = RunnableWithMessageHistory(
+                    chain,
+                    self.get_session_history,
+                    input_messages_key="input",
+                    history_messages_key="history",
+                )
+
+                response = with_message_history.invoke(
+                    {"input": prompt},
+                    config={"configurable": {"session_id": session_id}}
+                )
+            else:
+                messages = [system_msg, human_msg]
+                response = self.llm.invoke(messages)
             test_code = response.content
 
             logger.info(f"LLM response received, length: {len(test_code)}")
@@ -379,6 +464,7 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         parameters = structured_data.get("parameters", [])
         return_type = structured_data.get("return_type", "void")
         file_content = structured_data.get("file_content", "")
+        session_id = structured_data.get("session_id", None)
 
         logger.info(f"Generating empty method code for: {method_name}")
         logger.info(f"Parameters: {parameters}")
@@ -477,14 +563,44 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         # 使用LangChain调用LLM生成空方法代码
         try:
             # 创建消息列表
-            messages = [
-                SystemMessage(content="You are an expert in Java development and code generation."),
-                HumanMessage(content=prompt)
-            ]
+            # messages = [
+            #     SystemMessage(content="You are an expert in Java development and code generation."),
+            #     HumanMessage(content=prompt)
+            # ]
+            # 创建消息列表
+            system_msg = SystemMessage(content="You are an expert in Java development and code generation.")
+            human_msg = HumanMessage(content=prompt)
 
             # 调用LLM
             logger.info("Calling LLM for empty method generation with LangChain")
-            response = self.llm.invoke(messages)
+            # response = self.llm.invoke(messages)
+            if session_id:
+                # 使用带历史记录的调用
+                logger.info(f"Using session memory for session_id: {session_id}")
+
+                # 构造包含历史的 prompt 模板
+                prompt_template_obj = ChatPromptTemplate.from_messages([
+                    ("system", "You are an expert in Java development and code generation."),
+                    MessagesPlaceholder(variable_name="history"),
+                    ("human", "{input}")
+                ])
+
+                chain = prompt_template_obj | self.llm
+
+                with_message_history = RunnableWithMessageHistory(
+                    chain,
+                    self.get_session_history,
+                    input_messages_key="input",
+                    history_messages_key="history",
+                )
+
+                response = with_message_history.invoke(
+                    {"input": prompt},
+                    config={"configurable": {"session_id": session_id}}
+                )
+            else:
+                messages = [system_msg, human_msg]
+                response = self.llm.invoke(messages)
             empty_method_code = response.content
 
             logger.info(f"LLM response received, length: {len(empty_method_code)}")
@@ -521,6 +637,7 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         code_structure = error_data.get("code_structure", "")
         current_class_name = error_data.get("current_class_name", "")
         is_interface_file = error_data.get("is_interface_file", False)
+        session_id = error_data.get("session_id", None)
 
         logger.info(f"Fixing compilation error for class: {current_class_name}")
         logger.info(f"Error message: {error_message}")
@@ -580,14 +697,43 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         # 使用LangChain调用LLM修复编译错误
         try:
             # 创建消息列表
-            messages = [
-                SystemMessage(content="You are an expert in Java development, debugging, and JUnit 5."),
-                HumanMessage(content=prompt)
-            ]
+            # messages = [
+            #     SystemMessage(content="You are an expert in Java development, debugging, and JUnit 5."),
+            #     HumanMessage(content=prompt)
+            # ]
+            system_msg = SystemMessage(content="You are an expert in Java development, debugging, and JUnit 5.")
+            human_msg = HumanMessage(content=prompt)
 
             # 调用LLM
             logger.info("Calling LLM for fixing compilation error with LangChain")
-            response = self.llm.invoke(messages)
+            # response = self.llm.invoke(messages)
+            if session_id:
+                # 使用带历史记录的调用
+                logger.info(f"Using session memory for session_id: {session_id}")
+
+                # 构造包含历史的 prompt 模板
+                prompt_template_obj = ChatPromptTemplate.from_messages([
+                    ("system", "You are an expert in Java development, debugging, and JUnit 5."),
+                    MessagesPlaceholder(variable_name="history"),
+                    ("human", "{input}")
+                ])
+
+                chain = prompt_template_obj | self.llm
+
+                with_message_history = RunnableWithMessageHistory(
+                    chain,
+                    self.get_session_history,
+                    input_messages_key="input",
+                    history_messages_key="history",
+                )
+
+                response = with_message_history.invoke(
+                    {"input": prompt},
+                    config={"configurable": {"session_id": session_id}}
+                )
+            else:
+                messages = [system_msg, human_msg]
+                response = self.llm.invoke(messages)
             fixed_code = response.content
 
             logger.info(f"LLM response received, length: {len(fixed_code)}")

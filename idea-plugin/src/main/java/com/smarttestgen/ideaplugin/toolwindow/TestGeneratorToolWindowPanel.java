@@ -1,14 +1,14 @@
 package com.smarttestgen.ideaplugin.toolwindow;
 
-import com.smarttestgen.ideaplugin.dialog.InsertionManager;
-import com.smarttestgen.ideaplugin.dialog.components.CodeEditorPanel;
-import com.smarttestgen.ideaplugin.dialog.components.InfoPanel;
+import com.smarttestgen.ideaplugin.service.code.InsertionManager;
+import com.smarttestgen.ideaplugin.toolwindow.components.CodeEditorPanel;
+import com.smarttestgen.ideaplugin.toolwindow.components.InfoPanel;
 import com.smarttestgen.ideaplugin.model.FileLocationInfo;
-import com.smarttestgen.ideaplugin.service.CodeStructureService;
-import com.smarttestgen.ideaplugin.service.FileLocationService;
-import com.smarttestgen.ideaplugin.service.TestCodeService;
-import com.smarttestgen.ideaplugin.service.TestFileCreatorService;
-import com.smarttestgen.ideaplugin.service.ThreadPoolService;
+import com.smarttestgen.ideaplugin.service.code.CodeStructureService;
+import com.smarttestgen.ideaplugin.service.file.FileLocationService;
+import com.smarttestgen.ideaplugin.service.code.TestCodeService;
+import com.smarttestgen.ideaplugin.service.util.TestFileCreatorService;
+import com.smarttestgen.ideaplugin.service.util.ThreadPoolService;
 import com.smarttestgen.ideaplugin.toolwindow.components.StructuredResultPanel;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;

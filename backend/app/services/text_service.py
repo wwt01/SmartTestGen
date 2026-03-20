@@ -10,10 +10,11 @@ class TextService:
     """处理文本的业务逻辑"""
 
     @staticmethod
-    def process_selected_text(content: str) -> dict:
+    def process_selected_text(content: str, session_id: str = None) -> dict:
         """
         处理 IDEA 插件发送的自然语言需求，生成结构化的信息
         :param content: 选中的自然语言需求内容
+        :param session_id: 会话标识
         :return: 处理后的结果，包含原文本、清洗后的文本、弱特征和结构化信息
         """
         try:
@@ -26,7 +27,10 @@ class TextService:
 
             # 2. LLM结构化解析：构造提示词并获取结构化解析结果
             logger.info("Step 2: Calling LLM service")
-            structured_result = llm_service.get_structured_result(preprocessing_result)
+            structured_result = llm_service.get_structured_result(
+                preprocessing_result,
+                session_id=session_id
+            )
             logger.info(f"LLM result: {structured_result}")
 
             # 3. 返回处理结果

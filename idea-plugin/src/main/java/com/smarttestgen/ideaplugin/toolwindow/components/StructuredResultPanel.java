@@ -1,7 +1,5 @@
 package com.smarttestgen.ideaplugin.toolwindow.components;
 
-import com.smarttestgen.ideaplugin.dialog.UiComponents;
-import com.smarttestgen.ideaplugin.dialog.components.ButtonPanel;
 import com.smarttestgen.ideaplugin.util.Constants;
 import com.smarttestgen.ideaplugin.util.JsonUtils;
 

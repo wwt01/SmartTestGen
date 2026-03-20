@@ -1,6 +1,6 @@
 package com.smarttestgen.ideaplugin;
 
-import com.smarttestgen.ideaplugin.service.ApiService;
+import com.smarttestgen.ideaplugin.service.api.ApiService;
 import com.smarttestgen.ideaplugin.toolwindow.TestGeneratorToolWindowPanel;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;

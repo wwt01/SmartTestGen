@@ -70,8 +70,6 @@
         <!-- Right-click menu configuration -->
         <group id="MyEditorPopupMenu" text="Test Case Generator">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-            <action id="GenerateTestCaseAction" class="com.smarttestgen.ideaplugin.GenerateTestCaseAction"
-                    text="Generate Test Code (Dialog)" description="Generate test code in a dialog"/>
             <action id="TestGeneratorToolWindowAction" class="com.smarttestgen.ideaplugin.TestGeneratorToolWindowAction"
                     text="Generate Test Code (Sidebar)" description="Generate test code in sidebar"/>
         </group>

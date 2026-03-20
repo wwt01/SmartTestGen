@@ -3,7 +3,7 @@ from app.schemas.text_schema import (TextRequest, StructuredRequest, FixCompilat
 from app.services.text_service import text_service
 from app.utils.response import success_response, fail_response
 
-# 创建路由实例（前缀 /api/text，方便区分接口模块）
+# 创建路由实例（前缀 /api/text，区分接口模块）
 router = APIRouter(prefix="/api/text", tags=["文本处理"])
 
 
@@ -11,7 +11,10 @@ router = APIRouter(prefix="/api/text", tags=["文本处理"])
 async def parse_text(request: TextRequest):
     try:
         # 调用业务逻辑处理文本
-        result = text_service.process_selected_text(request.content)
+        result = text_service.process_selected_text(
+            content=request.content,
+            session_id=request.session_id
+        )
         return success_response(data=result)
     except Exception as e:
         # 异常处理
@@ -31,12 +34,14 @@ async def generate_test_code(request: StructuredRequest):
             "class_name": request.class_name,
             "is_interface": request.is_interface,
             "code_structure": request.code_structure,
-            "file_content": request.file_content
+            "file_content": request.file_content,
+            "session_id": request.session_id
         })
         # 检查是否有错误
         if "error" in result:
             raise HTTPException(status_code=500, detail=fail_response(
                 msg=result["message"]).model_dump())
+        print("生成的测试代码是" + result["test_code"])
         return success_response(data=result)
     except Exception as e:
         # 异常处理
@@ -47,14 +52,15 @@ async def generate_test_code(request: StructuredRequest):
 @router.post("/fix-compilation-error", summary="修复测试代码的编译错误")
 async def fix_compilation_error(request: FixCompilationErrorRequest):
     try:
-        print("错误信息是"+request.error_message)
+        print("错误信息是" + request.error_message)
         # 调用业务逻辑修复编译错误
         result = text_service.fix_compilation_error({
             "code": request.code,
             "error_message": request.error_message,
             "code_structure": request.code_structure,
             "current_class_name": request.current_class_name,
-            "is_interface_file": request.is_interface_file
+            "is_interface_file": request.is_interface_file,
+            "session_id": request.session_id
         })
         # 检查是否有错误
         if "error" in result:

@@ -6,10 +6,12 @@ from typing import Optional, List, Dict, Any
 
 class TextRequest(BaseModel):
     content: str = Field(..., description="IDEA 插件选中的自然语言需求内容")
-    # 可选：扩展字段，比如用户标识（毕业设计可留空）
+    # 可选：扩展字段，比如用户标识
     user_id: Optional[str] = Field(None, description="可选：用户标识")
+    # 新增
+    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
 
-# 接收结构化信息的请求模型，用于生成 Java 单元测试代码
+# 接收结构化信息的请求模型，用于生成 Java 单元测试代码11
 
 
 class StructuredRequest(BaseModel):
@@ -21,6 +23,8 @@ class StructuredRequest(BaseModel):
     is_interface: Optional[bool] = Field(False, description="是否为接口类，用于选择不同的提示词模板")
     code_structure: Optional[str] = Field(None, description="代码结构信息，字符串形式")
     file_content: Optional[str] = Field(None, description="需求注释所在文件的代码内容")
+    # 新增
+    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
 
 # 统一响应模型
 
@@ -39,3 +43,5 @@ class FixCompilationErrorRequest(BaseModel):
     code_structure: Optional[str] = Field(None, description="代码结构信息")
     current_class_name: Optional[str] = Field(None, description="当前类名")
     is_interface_file: Optional[bool] = Field(False, description="是否是接口文件")
+    # 新增
+    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
