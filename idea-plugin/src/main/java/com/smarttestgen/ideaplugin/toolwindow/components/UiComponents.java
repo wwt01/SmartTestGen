@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.dialog;
+package com.smarttestgen.ideaplugin.toolwindow.components;
 
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
@@ -6,6 +6,7 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.components.JBScrollPane;
+import com.smarttestgen.ideaplugin.util.CodeUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -102,7 +103,7 @@ public class UiComponents {
         
         JPanel panel = new JPanel(new BorderLayout());
         
-        JBTextArea textArea = new JBTextArea(Utils.JsonUtils.formatJson(rawResult));
+        JBTextArea textArea = new JBTextArea(CodeUtils.JsonUtils.formatJson(rawResult));
         textArea.setEditable(false);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         
@@ -150,7 +151,7 @@ public class UiComponents {
      * @param parameterTypeFields 参数类型文本框列表
      * @return 参数面板
      */
-    public static JPanel createParametersPanel(List<Utils.ParameterInfo> parameters, 
+    public static JPanel createParametersPanel(List<CodeUtils.ParameterInfo> parameters,
                                              List<JTextField> parameterNameFields, 
                                              List<JTextField> parameterTypeFields) {
         JPanel paramsPanel = new JPanel();
@@ -159,7 +160,7 @@ public class UiComponents {
         
         if (!parameters.isEmpty()) {
             // 为每个参数创建一行显示
-            for (Utils.ParameterInfo param : parameters) {
+            for (CodeUtils.ParameterInfo param : parameters) {
                 JPanel paramRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 
                 // 参数名称标签

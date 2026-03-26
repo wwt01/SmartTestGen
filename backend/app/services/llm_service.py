@@ -8,28 +8,31 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, FewShotChatMessagePromptTemplate
 from pydantic import BaseModel, Field
 from app.config import settings
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='[SmartTestGen] %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
 class InMemoryHistory(BaseChatMessageHistory, BaseModel):
     """In memory implementation of chat message history."""
     messages: List[BaseMessage] = Field(default_factory=list)
+    static_context: Dict[str, Any] = Field(default_factory=dict)
 
     def add_messages(self, messages: List[BaseMessage]) -> None:
         """Add a list of messages to the store"""
         self.messages.extend(messages)
-        # Keep only the last 20 messages to prevent token overflow
-        if len(self.messages) > 20:
-            self.messages = self.messages[-20:]
+        if len(self.messages) > 6:
+            self.messages = self.messages[-6:]
 
     def clear(self) -> None:
         self.messages = []
+        self.static_context = {}
 
 
 class LLMService:
@@ -40,16 +43,40 @@ class LLMService:
         self.examples = self._load_examples()
         self.prompts = self._load_prompts()
 
-        # 初始化LangChain的ChatOpenAI实例
-        self.llm = ChatOpenAI(
-            api_key=settings.DASHSCOPE_API_KEY,
-            base_url=settings.LLM_API_URL,
-            model=settings.LLM_MODEL,
-            temperature=0.3,
-            max_tokens=2000,
-            top_p=0.9,
-            timeout=settings.LLM_TIMEOUT
-        )
+        # 初始化会话存储
+        self.store: Dict[str, InMemoryHistory] = {}
+
+        # 根据配置选择本地模型或云端模型
+        if settings.USE_LOCAL_LLM:
+            logger.info("Using local LLM (Ollama)")
+            logger.info(f"Local LLM URL: {settings.LOCAL_LLM_URL}")
+            logger.info(f"Local LLM Model: {settings.LOCAL_LLM_MODEL}")
+
+            # 本地模型不需要真实API Key，但LangChain要求必须提供
+            self.llm = ChatOpenAI(
+                api_key="ollama",
+                base_url=settings.LOCAL_LLM_URL,
+                model=settings.LOCAL_LLM_MODEL,
+                temperature=0.3,
+                max_tokens=2000,
+                top_p=0.9,
+                timeout=settings.LLM_TIMEOUT
+            )
+        else:
+            logger.info("Using cloud LLM (DeepSeek/Qwen)")
+            logger.info(f"Cloud LLM URL: {settings.LLM_API_URL}")
+            logger.info(f"Cloud LLM Model: {settings.LLM_MODEL}")
+
+            # 云端模型需要API Key
+            self.llm = ChatOpenAI(
+                api_key=settings.DASHSCOPE_API_KEY,
+                base_url=settings.LLM_API_URL,
+                model=settings.LLM_MODEL,
+                temperature=0.3,
+                max_tokens=2000,
+                top_p=0.9,
+                timeout=settings.LLM_TIMEOUT
+            )
 
         # 创建JSON输出解析器
         self.json_parser = JsonOutputParser()
@@ -58,6 +85,107 @@ class LLMService:
         if session_id not in self.store:
             self.store[session_id] = InMemoryHistory()
         return self.store[session_id]
+
+    def init_session(self, context_data: Dict[str, Any]) -> str:
+        """初始化会话，存储静态上下文信息，返回session_id"""
+        import uuid
+        session_id = str(uuid.uuid4())
+        
+        fields = context_data.get("fields", [])
+        methods = context_data.get("methods", [])
+        dependencies = context_data.get("dependencies", [])
+        
+        logger.info(f"初始化数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
+        
+        fields, methods = self.filter_private_members(fields, methods)
+        dependencies = self.filter_relevant_dependencies(dependencies, methods, fields)
+        
+        logger.info(f"过滤后存储: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
+        
+        history = self.get_session_history(session_id)
+        history.static_context = {
+            "class_name": context_data.get("class_name", ""),
+            "is_interface": context_data.get("is_interface", False),
+            "package_name": context_data.get("package_name", ""),
+            "class_type": context_data.get("class_type", "Unknown"),
+            "fields": fields,
+            "methods": methods,
+            "dependencies": dependencies
+        }
+        
+        logger.info("=" * 60)
+        logger.info("会话初始化成功")
+        logger.info(f"Session ID: {session_id}")
+        logger.info(f"类名: {context_data.get('class_name')} | 类型: {context_data.get('class_type')}")
+        logger.info("=" * 60)
+        
+        return session_id
+
+    def get_static_context(self, session_id: str) -> Dict[str, Any]:
+        """获取会话的静态上下文"""
+        if session_id not in self.store:
+            return {}
+        return self.store[session_id].static_context
+
+    def filter_private_members(self, fields: List[Dict], methods: List[Dict]) -> tuple:
+        """过滤private成员，只保留public/protected"""
+        filtered_fields = [
+            f for f in fields 
+            if f.get('visibility', 'public') in ['public', 'protected']
+        ]
+        filtered_methods = [
+            m for m in methods 
+            if m.get('visibility', 'public') in ['public', 'protected']
+        ]
+        return filtered_fields, filtered_methods
+
+    def filter_relevant_methods(self, methods: List[Dict], target_method_name: str, class_name: str = "") -> List[Dict]:
+        """只保留相关方法：被测试方法、构造函数、getter/setter、以及少量其他public方法"""
+        relevant = []
+        for m in methods:
+            name = m.get('name', '')
+            
+            if name == target_method_name:
+                relevant.append(m)
+                continue
+            
+            if name in ['<init>', 'constructor'] or name == class_name:
+                relevant.append(m)
+                continue
+            
+            if name.startswith('get') or name.startswith('set') or name.startswith('is'):
+                relevant.append(m)
+                continue
+            
+            if len(relevant) < 8:
+                relevant.append(m)
+        
+        return relevant
+
+    def filter_relevant_dependencies(self, dependencies: List[str], methods: List[Dict], fields: List[Dict]) -> List[str]:
+        """只保留在相关方法和字段中使用的依赖"""
+        used_types = set()
+        
+        for m in methods:
+            for p in m.get('parameters', []):
+                param_type = p.get('type', '')
+                if param_type:
+                    used_types.add(param_type)
+            return_type = m.get('return_type', '')
+            if return_type:
+                used_types.add(return_type)
+        
+        for f in fields:
+            field_type = f.get('type', '')
+            if field_type:
+                used_types.add(field_type)
+        
+        relevant_deps = []
+        for dep in dependencies:
+            if any(dep in used_type or used_type.endswith(dep) for used_type in used_types):
+                relevant_deps.append(dep)
+        
+        return relevant_deps
 
     def _load_examples(self) -> Dict[str, Any]:
         """加载样例配置文件"""
@@ -84,148 +212,98 @@ class LLMService:
                 }
             }
 
-    def _detect_language(self, text: str) -> str:
-        """检测文本语言（中文或英文）"""
-        import re
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
-        english_chars = len(re.findall(r'[a-zA-Z]', text))
-
-        if chinese_chars > english_chars:
-            return "chinese"
-        else:
-            return "english"
-
-    def construct_parse_prompt(self, preprocessing_result: Dict[str, Any]) -> str:
-        """构造简洁的提示词"""
-        cleaned_text = preprocessing_result["cleaned_text"]
-
-        # 检测语言
-        language = self._detect_language(preprocessing_result["original_text"])
+    def _prepare_few_shot_examples(self, preprocessing_result: Dict[str, Any], limit: int = 6) -> List[Dict[str, str]]:
+        """准备Few-Shot示例，格式为[{input: natural_language, output: structured_result}]"""
+        # 直接使用预处理结果中的语言字段
+        language = preprocessing_result.get("language", "english")
         examples = self.examples.get(language, [])
 
-        # 从配置文件中获取提示词模板
-        prompt_template = self.prompts.get("llm", {}).get("parse_requirement_prompt", "")
-
-        # 如果模板为空，使用默认提示词
-        if not prompt_template:
-            prompt_template = "You are an expert in Java testing. Parse the following Java requirement into structured test case information.\n\n# Requirement\n{cleaned_text}\n\n# Output JSON\n{\n  \"method_name\": \"string\",\n  \"parameters\": [],\n  \"return_type\": \"string\",\n  \"expectations\": []\n}"
-
-        # 使用Python的string.Template进行变量替换（模板中已经使用${}格式）
-        import string
-        template = string.Template(prompt_template)
-
-        prompt = template.safe_substitute(
-            cleaned_text=cleaned_text,
-            examples=self._format_examples(examples, limit=6)
-        )
-
-        return prompt
-
-    def _format_examples(self, examples: list, limit: int = 10) -> str:
-        """格式化样例为字符串，限制数量避免混淆"""
         if not examples:
-            return "No examples available."
+            return []
 
-        # 只取前limit个样例，提供足够的样例给LLM参考
-        examples_to_show = examples[:limit]
+        # 只取前limit个样例
+        examples_to_use = examples[:limit]
 
-        formatted = []
-        for i, example in enumerate(examples_to_show, 1):
+        few_shot_examples = []
+        for example in examples_to_use:
             natural_lang = example.get("natural_language", "")
             structured = example.get("structured_result", {})
-            formatted.append(f"""
-Example {i}:
-Natural Language: {natural_lang}
-Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
-""")
 
-        return '\n'.join(formatted)
+            # 将structured_result转换为JSON字符串
+            output_str = json.dumps(structured, ensure_ascii=False, indent=2)
 
-    def get_structured_result(self, preprocessing_result: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
-        """获取结构化解析结果 - 使用LangChain"""
-        logger.info("Starting get_structured_result")
+            few_shot_examples.append({
+                "input": natural_lang,
+                "output": output_str
+            })
 
-        # 构造提示词
-        logger.info("Constructing prompt")
-        prompt = self.construct_parse_prompt(preprocessing_result)
-        logger.info(f"Prompt constructed, length: {len(prompt)}")
+        return few_shot_examples
 
-        # 打印完整提示词用于调试
-        logger.info("=" * 80)
-        logger.info("FULL PROMPT SENT TO LLM:")
-        logger.info("=" * 80)
-        logger.info(prompt)
-        logger.info("=" * 80)
+    def get_structured_result(self, preprocessing_result: Dict[str, Any]) -> Dict[str, Any]:
+        """获取结构化解析结果 - 使用LangChain和FewShotChatMessagePromptTemplate"""
+        logger.info("=" * 60)
+        logger.info("开始解析需求文本")
+        logger.info("=" * 60)
 
-        # 使用LangChain调用LLM
-        logger.info("Calling LLM with LangChain")
+        system_prompt_template = self.prompts.get("llm", {}).get("parse_requirement_system_prompt", "")
+        user_prompt_template = self.prompts.get("llm", {}).get("parse_requirement_user_prompt", "")
+
+        if not system_prompt_template:
+            system_prompt_template = "You are an expert in Java testing. Parse the following Java requirement into structured test case information."
+
+        if not user_prompt_template:
+            user_prompt_template = "# Requirement\n{cleaned_text}\n\n# Output JSON\n{{\n  \"method_name\": \"string\",\n  \"parameters\": [],\n  \"return_type\": \"string\",\n  \"expectations\": []\n}}"
+
+        few_shot_examples = self._prepare_few_shot_examples(preprocessing_result, limit=6)
+        logger.info(f"加载 {len(few_shot_examples)} 个示例")
+
+        example_prompt = ChatPromptTemplate.from_messages([
+            ("human", "{input}"),
+            ("ai", "{output}")
+        ])
+
+        few_shot_prompt = FewShotChatMessagePromptTemplate(
+            example_prompt=example_prompt,
+            examples=few_shot_examples,
+        )
+
+        final_prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt_template),
+            few_shot_prompt,
+            ("human", user_prompt_template)
+        ])
+
+        cleaned_text = preprocessing_result["cleaned_text"]
 
         try:
-            # 创建消息列表
-            # messages = [
-            #     SystemMessage(content="You are an expert in Java software testing and natural language processing."),
-            #     HumanMessage(content=prompt)
-            # ]
-            # 创建消息列表
-            system_msg = SystemMessage(content="You are an expert in Java software testing and natural language processing.")
-            human_msg = HumanMessage(content=prompt)
-
-            # # 调用LLM
-            # response = self.llm.invoke(messages)
-
-            if session_id:
-                # 使用带历史记录的调用
-                logger.info(f"Using session memory for session_id: {session_id}")
-
-                # 构造包含历史的 prompt 模板
-                prompt_template = ChatPromptTemplate.from_messages([
-                    ("system", "You are an expert in Java software testing and natural language processing."),
-                    MessagesPlaceholder(variable_name="history"),
-                    ("human", "{input}")
-                ])
-
-                chain = prompt_template | self.llm
-
-                with_message_history = RunnableWithMessageHistory(
-                    chain,
-                    self.get_session_history,
-                    input_messages_key="input",
-                    history_messages_key="history",
-                )
-
-                response = with_message_history.invoke(
-                    {"input": prompt},
-                    config={"configurable": {"session_id": session_id}}
-                )
-            else:
-                # 不使用历史记录的调用
-                messages = [system_msg, human_msg]
-                response = self.llm.invoke(messages)
+            logger.info("调用 LLM 解析需求...")
+            chain = final_prompt | self.llm
+            response = chain.invoke({"cleaned_text": cleaned_text})
 
             content = response.content
-            logger.info(f"LLM call completed, raw response: {content}")
 
-            # 移除markdown代码块标记
             if content.startswith("```json"):
-                content = content[7:]  # 移除 ```json
+                content = content[7:]
             elif content.startswith("```"):
-                content = content[3:]  # 移除 ```
+                content = content[3:]
 
             if content.endswith("```"):
-                content = content[:-3]  # 移除 ```
+                content = content[:-3]
 
             content = content.strip()
 
-            # 解析JSON响应
             structured_data = json.loads(content)
 
-            logger.info(f"Parsed structured data: {structured_data}")
+            logger.info("=" * 60)
+            logger.info("需求解析成功")
+            logger.info(f"方法名: {structured_data.get('method_name')}")
+            logger.info(f"参数数量: {len(structured_data.get('parameters', []))}")
+            logger.info(f"返回类型: {structured_data.get('return_type')}")
+            logger.info("=" * 60)
             return structured_data
 
         except Exception as e:
-            logger.error(f"Error calling LLM: {e}")
-            logger.error(f"Error type: {type(e).__name__}")
-            # 返回默认结构化结果
+            logger.error(f"解析需求失败: {str(e)}")
             default_result = {
                 "method_name": "",
                 "parameters": [],
@@ -240,180 +318,89 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
             return default_result
 
     def generate_test_code(self, structured_data: Dict[str, Any]) -> str:
-        """根据结构化信息生成 Java 单元测试代码 - 使用LangChain"""
-        logger.info("Starting generate_test_code")
+        """根据结构化信息生成 Java 单元测试代码 - 使用LangChain和ChatPromptTemplate"""
+        logger.info("=" * 60)
+        logger.info("开始生成测试代码")
+        logger.info("=" * 60)
 
-        # 提取结构化信息
+        session_id = structured_data.get("session_id")
+        if not session_id:
+            logger.error("缺少 session_id")
+            raise ValueError("session_id is required")
+
+        static_context = self.get_static_context(session_id)
+        if not static_context:
+            logger.error(f"会话不存在: {session_id}")
+            raise ValueError(f"Session not found: {session_id}, please call init-session first")
+
         method_name = structured_data.get("method_name", "")
         parameters = structured_data.get("parameters", [])
         return_type = structured_data.get("return_type", "")
         expectations = structured_data.get("expectations", [])
-        class_name = structured_data.get("class_name", "Example")
-        is_interface = structured_data.get("is_interface", False)
-        code_structure = structured_data.get("code_structure", "")
-        file_content = structured_data.get("file_content", "")
-        empty_method_code = structured_data.get("empty_method_code", "")
-        session_id = structured_data.get("session_id", None)
 
-        logger.info(f"Generating test code for method: {method_name}")
-        logger.info(f"Parameters: {parameters}")
-        logger.info(f"Return type: {return_type}")
-        logger.info(f"Expectations: {expectations}")
-        logger.info(f"Class name: {class_name}")
-        logger.info(f"Is interface: {is_interface}")
-        logger.info(f"Code structure provided: {code_structure}")
-        logger.info(f"File content provided: {file_content[:200]}..." if file_content else "No file content provided")
-        logger.info(f"Empty method code provided: {empty_method_code[:200]}..." if empty_method_code else "No empty method code provided")
+        class_name = static_context.get("class_name", "Example")
+        is_interface = static_context.get("is_interface", False)
+        package_name = static_context.get("package_name", "")
+        class_type = static_context.get("class_type", "Unknown")
+        fields = static_context.get("fields", [])
+        methods = static_context.get("methods", [])
+        dependencies = static_context.get("dependencies", [])
 
-        # 分析文件内容，提取类信息和package信息
-        package_name = ""
-        if file_content:
-            # 尝试从文件内容中提取package信息
-            import re
-            # 查找package定义
-            package_match = re.search(r'package\s+([\w\.]+);', file_content)
-            if package_match:
-                package_name = package_match.group(1)
-                logger.info(f"Extracted package information: {package_name}")
+        logger.info(f"目标方法: {method_name}")
+        logger.info(f"参数数量: {len(parameters)} | 返回类型: {return_type}")
+        logger.info(f"类名: {class_name} | 类型: {class_type} | 接口: {is_interface}")
+        logger.info(f"上下文数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
 
-            # 尝试从文件内容中提取类名
-            if not class_name:
-                # 查找类定义
-                class_match = re.search(r'class\s+(\w+)\s*[\{\(]', file_content)
-                if class_match:
-                    class_name = class_match.group(1)
-                # 查找接口定义
-                interface_match = re.search(r'interface\s+(\w+)\s*[\{]', file_content)
-                if interface_match:
-                    class_name = interface_match.group(1)
-                logger.info(f"Extracted class information: name={class_name}")
-
-        # 根据is_interface参数选择不同的提示词模板
         if is_interface:
-            prompt_template = self.prompts.get("llm", {}).get("generate_test_prompt_interface", "")
-            logger.info("Using interface test prompt template")
+            system_template = self.prompts.get("llm", {}).get("generate_test_system_prompt_interface", "")
+            user_template = self.prompts.get("llm", {}).get("generate_test_user_prompt_interface", "")
         else:
-            prompt_template = self.prompts.get("llm", {}).get("generate_test_prompt", "")
-            logger.info("Using regular class test prompt template")
+            system_template = self.prompts.get("llm", {}).get("generate_test_system_prompt", "")
+            user_template = self.prompts.get("llm", {}).get("generate_test_user_prompt", "")
 
-        # 如果模板为空，使用默认提示词
-        if not prompt_template:
-            prompt_template = "You are an expert in Java testing. Generate JUnit 5 test code based on the following information.\n\n"
-            prompt_template += "# Method Information\n"
-            prompt_template += "Method Name: ${method_name}\n"
-            prompt_template += "Parameters: ${parameters}\n"
-            prompt_template += "Return Type: ${return_type}\n"
-            prompt_template += "Class Name: ${class_name}\n"
-            prompt_template += "Expectations: ${expectations}\n\n"
-            prompt_template += "# File Context (if available)\n"
-            prompt_template += "${file_content}...\n\n"
-            prompt_template += "# Empty Method Code (if available)\n"
-            prompt_template += "${empty_method_code}\n\n"
-            prompt_template += "# Requirements\n"
-            prompt_template += "1. Generate complete JUnit 5 test class\n"
-            prompt_template += "2. Use proper Java syntax and JUnit 5 annotations\n"
-            prompt_template += "3. Include necessary import statements for all classes used in the test code\n"
-            prompt_template += "4. Create test methods for different scenarios based on expectations\n"
-            prompt_template += "5. Use meaningful test method names\n"
-            prompt_template += "6. Include setup and teardown methods if needed\n"
-            prompt_template += "7. Mock dependencies if necessary\n"
-            prompt_template += "8. Consider the file context and empty method code to ensure the test code is compatible with the existing class structure\n"
-            prompt_template += "9. Ensure the test code can compile and run successfully with the provided class and method\n"
-            prompt_template += "10. IMPORTANT: For any class used in the test code that is not part of the standard Java library or JUnit 5, include the appropriate import statement\n"
-            prompt_template += "11. IMPORTANT: For example, if the class being tested is in the package 'com.example.calculator', include 'import com.example.calculator.Calculator;'\n"
-            prompt_template += "12. IMPORTANT: For any other classes used in the test code (e.g., custom data types, utilities), include their import statements as well\n\n"
-            prompt_template += "# Example Output Format\n"
-            prompt_template += "```java\n"
-            prompt_template += "# If package information is provided:\n"
-            prompt_template += "package ${package_name};\n\n"
-            prompt_template += "import org.junit.jupiter.api.BeforeEach;\n"
-            prompt_template += "import org.junit.jupiter.api.Test;\n"
-            prompt_template += "import static org.junit.jupiter.api.Assertions.*;\n"
-            prompt_template += "// Add any other necessary imports for the class being tested\n"
-            prompt_template += "import com.example.calculator.Calculator; // Example import for the class being tested\n"
-            prompt_template += "import com.example.utils.MathUtils; // Example import for other classes used\n\n"
-            prompt_template += "public class ${class_name}Test {\n"
-            prompt_template += "    private ${class_name} instance;\n\n"
-            prompt_template += "    @BeforeEach\n"
-            prompt_template += "    void setUp() {\n"
-            prompt_template += "        instance = new ${class_name}();\n"
-            prompt_template += "    }\n\n"
-            prompt_template += "    @Test\n"
-            prompt_template += "    void test${MethodName}() {\n"
-            prompt_template += "        // Test setup\n"
-            prompt_template += "        // Method call\n"
-            prompt_template += "        // Assertions\n"
-            prompt_template += "    }\n"
-            prompt_template += "}\n"
-            prompt_template += "```\n\n"
-            prompt_template += "# Important Note\n"
-            prompt_template += "Always use the actual class name extracted from the file context for creating instances and calling methods.\n"
-            prompt_template += "Do not create non-existent classes like 'TestClass'. Use the real class name from the file context.\n"
-            prompt_template += "For example, if the class name is 'Calculator', create an instance like 'private Calculator calculator = new Calculator();'\n"
-            prompt_template += "and call methods like 'calculator.calculateSum(a, b);'\n\n"
-            prompt_template += "# Your Output\n"
-            prompt_template += "Generate the complete JUnit 5 test class based on the provided information, including all necessary import statements."
+        if not system_template:
+            system_template = "You are an expert in Java software testing and JUnit 5."
 
-        # 格式化参数信息
+        if not user_template:
+            user_template = """# Test Requirements
+- Method name: {method_name}
+- Parameters: {parameters}
+- Return type: {return_type}
+- Expectations: {expectations}
+
+Generate the complete Java unit test code."""
+
         formatted_parameters = json.dumps(parameters, ensure_ascii=False, indent=2)
         formatted_expectations = json.dumps(expectations, ensure_ascii=False, indent=2)
+        formatted_fields = json.dumps(fields, ensure_ascii=False, indent=2)
+        formatted_methods = json.dumps(methods, ensure_ascii=False, indent=2)
+        formatted_dependencies = "\n".join([f"- {dep}" for dep in dependencies]) if dependencies else "No dependencies"
 
-        # 将 method_name 转换为首字母大写的形式，用于生成测试方法名
-        method_name_capitalized = method_name.capitalize() if method_name else ""
+        variables = {
+            "class_name": class_name,
+            "method_name": method_name,
+            "MethodName": method_name.capitalize() if method_name else "",
+            "parameters": formatted_parameters,
+            "return_type": return_type,
+            "expectations": formatted_expectations,
+            "package_name": package_name,
+            "class_type": class_type,
+            "fields": formatted_fields,
+            "methods": formatted_methods,
+            "dependencies": formatted_dependencies
+        }
 
-        # 使用Python的string.Template进行变量替换（模板中已经使用${}格式）
-        import string
-        template = string.Template(prompt_template)
-
-        # 准备文件内容和空方法代码
-        file_context = file_content[:500]
-
-        prompt = template.safe_substitute(
-            class_name=class_name,
-            method_name=method_name,
-            MethodName=method_name_capitalized,
-            parameters=formatted_parameters,
-            return_type=return_type,
-            expectations=formatted_expectations,
-            code_structure=code_structure,
-            file_content=file_context,
-            empty_method_code=empty_method_code,
-            package_name=package_name
-        )
-
-        logger.info(f"Prompt constructed for test generation, length: {len(prompt)}")
-
-        # 打印完整提示词用于调试
-        logger.info("=" * 80)
-        logger.info("FULL PROMPT SENT TO LLM (TEST GENERATION):")
-        logger.info("=" * 80)
-        logger.info(prompt)
-        logger.info("=" * 80)
-
-        # 使用LangChain调用LLM生成测试代码
         try:
-            # 创建消息列表
-            # messages = [
-            #     SystemMessage(content="You are an expert in Java software testing and JUnit 5."),
-            #     HumanMessage(content=prompt)
-            # ]
-            system_msg = SystemMessage(content="You are an expert in Java software testing and JUnit 5.")
-            human_msg = HumanMessage(content=prompt)
-            # 调用LLM
-            logger.info("Calling LLM for test code generation with LangChain")
-            # response = self.llm.invoke(messages)
-            if session_id:
-                # 使用带历史记录的调用
-                logger.info(f"Using session memory for session_id: {session_id}")
+            logger.info("调用 LLM 生成测试代码...")
 
-                # 构造包含历史的 prompt 模板
-                prompt_template_obj = ChatPromptTemplate.from_messages([
-                    ("system", "You are an expert in Java software testing and JUnit 5."),
+            if session_id:
+                prompt_with_history = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
                     MessagesPlaceholder(variable_name="history"),
-                    ("human", "{input}")
+                    ("human", user_template)
                 ])
 
-                chain = prompt_template_obj | self.llm
+                chain = prompt_with_history | self.llm
 
                 with_message_history = RunnableWithMessageHistory(
                     chain,
@@ -423,18 +410,20 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
                 )
 
                 response = with_message_history.invoke(
-                    {"input": prompt},
+                    variables,
                     config={"configurable": {"session_id": session_id}}
                 )
             else:
-                messages = [system_msg, human_msg]
-                response = self.llm.invoke(messages)
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    ("human", user_template)
+                ])
+
+                chain = prompt | self.llm
+                response = chain.invoke(variables)
+
             test_code = response.content
 
-            logger.info(f"LLM response received, length: {len(test_code)}")
-            logger.info(f"Full LLM response:\n{test_code}")
-
-            # 提取代码块
             if test_code.startswith("```java"):
                 test_code = test_code[7:]
             elif test_code.startswith("```"):
@@ -445,18 +434,20 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
 
             test_code = test_code.strip()
 
-            logger.info("Test code generation completed successfully")
+            logger.info("=" * 60)
+            logger.info("测试代码生成成功")
+            logger.info(f"代码长度: {len(test_code)} 字符")
+            logger.info("=" * 60)
             return test_code
 
         except Exception as e:
-            logger.error(f"Error generating test code: {e}")
-            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"生成测试代码失败: {str(e)}")
             import traceback
-            logger.error(f"Error traceback: {traceback.format_exc()}")
+            logger.error(f"错误堆栈: {traceback.format_exc()}")
             return "// Failed to generate test code"
 
     def generate_empty_method(self, structured_data: Dict[str, Any]) -> str:
-        """根据结构化信息生成 Java 空方法代码 - 使用LangChain"""
+        """根据结构化信息生成 Java 空方法代码 - 使用字符串拼接"""
         logger.info("Starting generate_empty_method")
 
         # 提取结构化信息
@@ -464,258 +455,152 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
         parameters = structured_data.get("parameters", [])
         return_type = structured_data.get("return_type", "void")
         file_content = structured_data.get("file_content", "")
-        session_id = structured_data.get("session_id", None)
 
         logger.info(f"Generating empty method code for: {method_name}")
         logger.info(f"Parameters: {parameters}")
         logger.info(f"Return type: {return_type}")
-        logger.info(f"File content provided: {file_content[:200]}..." if file_content else "No file content provided")
 
-        # 分析文件内容，提取类信息
-        class_name = ""
+        # 分析文件内容，判断是否为接口
         is_interface = False
         if file_content:
-            # 尝试从文件内容中提取类名
             import re
-            # 查找类定义
-            class_match = re.search(r'class\s+(\w+)\s*[\{\(]', file_content)
-            if class_match:
-                class_name = class_match.group(1)
-            # 查找接口定义
             interface_match = re.search(r'interface\s+(\w+)\s*[\{]', file_content)
             if interface_match:
-                class_name = interface_match.group(1)
                 is_interface = True
-            logger.info(f"Extracted class information: name={class_name}, is_interface={is_interface}")
+                logger.info("Detected interface from file content")
 
-        # 构建提示词
-        # 从配置文件中获取提示词模板
-        prompt_template = self.prompts.get("llm", {}).get("generate_empty_method_prompt", "")
-
-        # 如果模板为空，使用默认提示词
-        if not prompt_template:
-            prompt_template = "You are an expert in Java development. Generate an empty method implementation based on the following information.\n\n"
-            prompt_template += "# Method Information\n"
-            prompt_template += "Method Name: ${method_name}\n"
-            prompt_template += "Parameters: ${parameters}\n"
-            prompt_template += "Return Type: ${return_type}\n"
-            prompt_template += "Class Name: ${class_name}\n"
-            prompt_template += "Is Interface: ${is_interface}\n\n"
-            prompt_template += "# File Context (if available)\n"
-            prompt_template += "${file_content}...\n\n"
-            prompt_template += "# Requirements\n"
-            prompt_template += "1. Generate only the method implementation, no class definition\n"
-            prompt_template += "2. Use proper Java syntax\n"
-            prompt_template += "3. For methods with return type, return a suitable default value or throw UnsupportedOperationException\n"
-            prompt_template += "4. For void methods, leave the body empty\n"
-            prompt_template += "5. Include proper parameter names and types\n"
-            prompt_template += "6. The method signature must match exactly what would be called by test code\n"
-            prompt_template += "7. If the class is an interface, generate only the method declaration without body\n"
-            prompt_template += "8. Consider the file context to ensure the method is compatible with the existing class structure\n\n"
-            prompt_template += "# Example\n"
-            prompt_template += "Input:\n"
-            prompt_template += "Method Name: calculateSum\n"
-            prompt_template += "Parameters: [{\"name\": \"a\", \"type\": \"int\"}, {\"name\": \"b\", \"type\": \"int\"}]\n"
-            prompt_template += "Return Type: int\n"
-            prompt_template += "Class Name: Calculator\n"
-            prompt_template += "Is Interface: false\n\n"
-            prompt_template += "Output:\n"
-            prompt_template += "public int calculateSum(int a, int b) {\n"
-            prompt_template += "    throw new UnsupportedOperationException(\"Method not implemented yet\");\n"
-            prompt_template += "}\n\n"
-            prompt_template += "Input:\n"
-            prompt_template += "Method Name: printMessage\n"
-            prompt_template += "Parameters: [{\"name\": \"message\", \"type\": \"String\"}]\n"
-            prompt_template += "Return Type: void\n"
-            prompt_template += "Class Name: MessageService\n"
-            prompt_template += "Is Interface: true\n\n"
-            prompt_template += "Output:\n"
-            prompt_template += "void printMessage(String message);\n\n"
-            prompt_template += "# Your Output\n"
-            prompt_template += "Generate the empty method implementation based on the provided information."
-
-        # 格式化参数信息
-        formatted_parameters = json.dumps(parameters, ensure_ascii=False)
-        file_context = file_content[:500]
-
-        # 使用Python的string.Template进行变量替换
-        import string
-        template = string.Template(prompt_template)
-
-        prompt = template.safe_substitute(
-            method_name=method_name,
-            parameters=formatted_parameters,
-            return_type=return_type,
-            class_name=class_name,
-            is_interface=is_interface,
-            file_content=file_context
-        )
-
-        logger.info(f"Prompt constructed for empty method generation, length: {len(prompt)}")
-
-        # 打印完整提示词用于调试
-        logger.info("=" * 80)
-        logger.info("FULL PROMPT SENT TO LLM (EMPTY METHOD GENERATION):")
-        logger.info("=" * 80)
-        logger.info(prompt)
-        logger.info("=" * 80)
-
-        # 使用LangChain调用LLM生成空方法代码
         try:
-            # 创建消息列表
-            # messages = [
-            #     SystemMessage(content="You are an expert in Java development and code generation."),
-            #     HumanMessage(content=prompt)
-            # ]
-            # 创建消息列表
-            system_msg = SystemMessage(content="You are an expert in Java development and code generation.")
-            human_msg = HumanMessage(content=prompt)
+            # 构建参数列表字符串
+            param_list = []
+            for param in parameters:
+                param_name = param.get("name", "param")
+                param_type = param.get("type", "Object")
+                param_list.append(f"{param_type} {param_name}")
 
-            # 调用LLM
-            logger.info("Calling LLM for empty method generation with LangChain")
-            # response = self.llm.invoke(messages)
-            if session_id:
-                # 使用带历史记录的调用
-                logger.info(f"Using session memory for session_id: {session_id}")
+            params_str = ", ".join(param_list)
 
-                # 构造包含历史的 prompt 模板
-                prompt_template_obj = ChatPromptTemplate.from_messages([
-                    ("system", "You are an expert in Java development and code generation."),
-                    MessagesPlaceholder(variable_name="history"),
-                    ("human", "{input}")
-                ])
+            # 如果是接口，只生成方法声明
+            if is_interface:
+                method_code = f"{return_type} {method_name}({params_str});"
+                logger.info(f"Generated interface method declaration: {method_code}")
+                return method_code
 
-                chain = prompt_template_obj | self.llm
+            # 根据返回类型生成默认返回值
+            default_value = self._get_default_return_value(return_type)
 
-                with_message_history = RunnableWithMessageHistory(
-                    chain,
-                    self.get_session_history,
-                    input_messages_key="input",
-                    history_messages_key="history",
-                )
-
-                response = with_message_history.invoke(
-                    {"input": prompt},
-                    config={"configurable": {"session_id": session_id}}
-                )
+            # 构建方法体
+            if return_type == "void":
+                method_body = "    // Implementation to be added"
             else:
-                messages = [system_msg, human_msg]
-                response = self.llm.invoke(messages)
-            empty_method_code = response.content
+                method_body = f"    {default_value}"
 
-            logger.info(f"LLM response received, length: {len(empty_method_code)}")
-            logger.info(f"Full LLM response:\n{empty_method_code}")
-
-            # 提取代码块
-            if empty_method_code.startswith("```java"):
-                empty_method_code = empty_method_code[7:]
-            elif empty_method_code.startswith("```"):
-                empty_method_code = empty_method_code[3:]
-
-            if empty_method_code.endswith("```"):
-                empty_method_code = empty_method_code[:-3]
-
-            empty_method_code = empty_method_code.strip()
+            # 拼接完整方法
+            method_code = f"public {return_type} {method_name}({params_str}) {{\n{method_body}\n}}"
 
             logger.info("Empty method code generation completed successfully")
-            return empty_method_code
+            logger.info(f"Generated method: {method_code}")
+            return method_code
 
         except Exception as e:
             logger.error(f"Error generating empty method code: {e}")
-            logger.error(f"Error type: {type(e).__name__}")
             import traceback
             logger.error(f"Error traceback: {traceback.format_exc()}")
             return "// Failed to generate empty method code"
+
+    def _get_default_return_value(self, return_type: str) -> str:
+        """根据返回类型获取默认返回值"""
+        default_values = {
+            "void": "// Implementation to be added",
+            "int": "return 0;",
+            "long": "return 0L;",
+            "short": "return 0;",
+            "byte": "return 0;",
+            "float": "return 0.0f;",
+            "double": "return 0.0;",
+            "boolean": "return false;",
+            "char": "return '\\0';",
+            "Integer": "return null;",
+            "Long": "return null;",
+            "Short": "return null;",
+            "Byte": "return null;",
+            "Float": "return null;",
+            "Double": "return null;",
+            "Boolean": "return null;",
+            "Character": "return null;",
+            "String": "return \"\";",
+        }
+
+        if return_type in default_values:
+            return default_values[return_type]
+        else:
+            return "throw new UnsupportedOperationException(\"Method not implemented yet\");"
 
     def fix_compilation_error(self, error_data: Dict[str, Any]) -> str:
         """修复编译错误 - 使用LangChain"""
         logger.info("Starting fix_compilation_error")
 
-        # 提取错误数据
+        session_id = error_data.get("session_id")
+        if not session_id:
+            logger.error("session_id is required for fix_compilation_error")
+            raise ValueError("session_id is required")
+
+        static_context = self.get_static_context(session_id)
+        if not static_context:
+            logger.error(f"No static context found for session_id: {session_id}")
+            raise ValueError(f"Session not found: {session_id}, please call init-session first")
+
         code = error_data.get("code", "")
         error_message = error_data.get("error_message", "")
-        code_structure = error_data.get("code_structure", "")
-        current_class_name = error_data.get("current_class_name", "")
-        is_interface_file = error_data.get("is_interface_file", False)
-        session_id = error_data.get("session_id", None)
+
+        current_class_name = static_context.get("class_name", "")
+        is_interface_file = static_context.get("is_interface", False)
+        package_name = static_context.get("package_name", "")
+        class_type = static_context.get("class_type", "Unknown")
+        fields = static_context.get("fields", [])
+        methods = static_context.get("methods", [])
+        dependencies = static_context.get("dependencies", [])
 
         logger.info(f"Fixing compilation error for class: {current_class_name}")
         logger.info(f"Error message: {error_message}")
-        logger.info(f"Code structure provided: {code_structure}")
+        logger.info(f"Package: {package_name}, Class type: {class_type}")
         logger.info(f"Is interface file: {is_interface_file}")
         logger.info(f"Code length: {len(code)}")
+        logger.info(f"上下文数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
 
-        # 构建提示词
-        prompt_template = self.prompts.get("llm", {}).get("fix_compilation_error_prompt", "")
+        formatted_fields = json.dumps(fields, ensure_ascii=False, indent=2)
+        formatted_methods = json.dumps(methods, ensure_ascii=False, indent=2)
+        formatted_dependencies = "\n".join([f"- {dep}" for dep in dependencies]) if dependencies else "No dependencies"
 
-        # 如果模板为空，使用默认提示词
-        if not prompt_template:
-            prompt_template = "You are an expert in Java development and debugging. Fix the compilation errors in the following test code based on the error message.\n\n"
-            prompt_template += "# Test Code with Errors\n"
-            prompt_template += "```java\n"
-            prompt_template += "${code}\n"
-            prompt_template += "```\n\n"
-            prompt_template += "# Compilation Error Message\n"
-            prompt_template += "${error_message}\n\n"
-            prompt_template += "# Code Structure (if available)\n"
-            prompt_template += "${code_structure}\n\n"
-            prompt_template += "# Class Information\n"
-            prompt_template += "Class Name: ${current_class_name}\n"
-            prompt_template += "Is Interface: ${is_interface_file}\n\n"
-            prompt_template += "# Requirements\n"
-            prompt_template += "1. Analyze the compilation error message carefully\n"
-            prompt_template += "2. Fix all compilation errors in the test code\n"
-            prompt_template += "3. Ensure the fixed code compiles successfully\n"
-            prompt_template += "4. Maintain the original functionality of the test code\n"
-            prompt_template += "5. Include all necessary import statements\n"
-            prompt_template += "6. Return the complete fixed test code\n"
-            prompt_template += "7. Do not include any explanations, just the fixed code\n\n"
-            prompt_template += "# Your Output\n"
-            prompt_template += "Generate the complete fixed test code with all compilation errors resolved."
+        system_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_system_prompt", "")
+        user_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_user_prompt", "")
 
-        # 使用Python的string.Template进行变量替换
-        import string
-        template = string.Template(prompt_template)
+        if not system_prompt:
+            system_prompt = "You are an expert in Java development, debugging, and JUnit 5. Your task is to fix the compilation errors in the provided test code based on the error message."
+        if not user_prompt:
+            user_prompt = "# Test Code with Errors\n```java\n{code}\n```\n\n# Compilation Error Message\n{error_message}\n\nGenerate the complete fixed test code with all compilation errors resolved."
 
-        prompt = template.safe_substitute(
-            code=code,
-            error_message=error_message,
-            code_structure=code_structure,
-            current_class_name=current_class_name,
-            is_interface_file=is_interface_file
-        )
-
-        logger.info(f"Prompt constructed for fixing compilation error, length: {len(prompt)}")
-
-        # 打印完整提示词用于调试
-        logger.info("=" * 80)
-        logger.info("FULL PROMPT SENT TO LLM (FIX COMPILATION ERROR):")
-        logger.info("=" * 80)
-        logger.info(prompt)
-        logger.info("=" * 80)
-
-        # 使用LangChain调用LLM修复编译错误
         try:
-            # 创建消息列表
-            # messages = [
-            #     SystemMessage(content="You are an expert in Java development, debugging, and JUnit 5."),
-            #     HumanMessage(content=prompt)
-            # ]
-            system_msg = SystemMessage(content="You are an expert in Java development, debugging, and JUnit 5.")
-            human_msg = HumanMessage(content=prompt)
-
-            # 调用LLM
             logger.info("Calling LLM for fixing compilation error with LangChain")
-            # response = self.llm.invoke(messages)
+            
+            variables = {
+                "code": code,
+                "error_message": error_message,
+                "current_class_name": current_class_name,
+                "is_interface_file": is_interface_file,
+                "package_name": package_name,
+                "class_type": class_type,
+                "fields": formatted_fields,
+                "methods": formatted_methods,
+                "dependencies": formatted_dependencies
+            }
+            
             if session_id:
-                # 使用带历史记录的调用
                 logger.info(f"Using session memory for session_id: {session_id}")
 
-                # 构造包含历史的 prompt 模板
                 prompt_template_obj = ChatPromptTemplate.from_messages([
-                    ("system", "You are an expert in Java development, debugging, and JUnit 5."),
+                    ("system", system_prompt),
                     MessagesPlaceholder(variable_name="history"),
-                    ("human", "{input}")
+                    ("human", user_prompt)
                 ])
 
                 chain = prompt_template_obj | self.llm
@@ -728,18 +613,24 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
                 )
 
                 response = with_message_history.invoke(
-                    {"input": prompt},
+                    variables,
                     config={"configurable": {"session_id": session_id}}
                 )
             else:
-                messages = [system_msg, human_msg]
-                response = self.llm.invoke(messages)
+                prompt_template_obj = ChatPromptTemplate.from_messages([
+                    ("system", system_prompt),
+                    ("human", user_prompt)
+                ])
+
+                chain = prompt_template_obj | self.llm
+
+                response = chain.invoke(variables)
+            
             fixed_code = response.content
 
             logger.info(f"LLM response received, length: {len(fixed_code)}")
             logger.info(f"Full LLM response:\n{fixed_code}")
 
-            # 提取代码块
             if fixed_code.startswith("```java"):
                 fixed_code = fixed_code[7:]
             elif fixed_code.startswith("```"):
@@ -759,7 +650,3 @@ Structured Result: {json.dumps(structured, ensure_ascii=False, indent=2)}
             import traceback
             logger.error(f"Error traceback: {traceback.format_exc()}")
             return "// Failed to fix compilation error"
-
-
-# 实例化服务
-llm_service = LLMService()

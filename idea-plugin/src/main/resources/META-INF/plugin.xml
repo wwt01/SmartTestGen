@@ -12,7 +12,7 @@
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <!-- 在插件页面显示的供应商名称 或组织ID -->
     <!-- 个体开发哈哈-->
-    <vendor url="https://www.yourcompany.com">属于wwt个人</vendor>
+    <vendor url="https://www.yourcompany.com">归属于位文同</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
@@ -70,8 +70,7 @@
         <!-- Right-click menu configuration -->
         <group id="MyEditorPopupMenu" text="Test Case Generator">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-            <action id="TestGeneratorToolWindowAction" class="com.smarttestgen.ideaplugin.TestGeneratorToolWindowAction"
-                    text="Generate Test Code (Sidebar)" description="Generate test code in sidebar"/>
+            <action id="TestGeneratorToolWindowAction" class="com.smarttestgen.ideaplugin.TestGeneratorToolWindowAction"/>
         </group>
     </actions>
 </idea-plugin>

@@ -11,6 +11,11 @@ public class Constants {
     public static final String API_URL = "http://localhost:8000/api/text/parse";
     
     /**
+     * 初始化会话 API请求URL
+     */
+    public static final String INIT_SESSION_URL = "http://localhost:8000/api/text/init-session";
+    
+    /**
      * 生成测试代码 API请求URL
      */
     public static final String GENERATE_TEST_URL = "http://localhost:8000/api/text/generate-test";

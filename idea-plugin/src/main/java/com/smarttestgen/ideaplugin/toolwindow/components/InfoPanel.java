@@ -1,7 +1,6 @@
-package com.smarttestgen.ideaplugin.dialog.components;
+package com.smarttestgen.ideaplugin.toolwindow.components;
 
 import javax.swing.*;
-import java.awt.*;
 import java.util.List;
 
 /**
@@ -9,10 +8,15 @@ import java.util.List;
  */
 public class InfoPanel extends JPanel {
     
+    /** 文件名标签 */
     private final JLabel fileNameLabel;
+    /** 文件路径标签 */
     private final JLabel filePathLabel;
+    /** 行号标签 */
     private final JLabel lineNumberLabel;
+    /** 文件类型标签 */
     private final JLabel fileTypeLabel;
+    /** 实现类信息面板 */
     private final JPanel implementationPanel;
     
     /**

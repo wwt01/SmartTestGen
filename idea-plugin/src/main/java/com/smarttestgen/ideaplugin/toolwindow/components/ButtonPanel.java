@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.dialog.components;
+package com.smarttestgen.ideaplugin.toolwindow.components;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,52 +9,58 @@ import java.awt.event.ActionListener;
  */
 public class ButtonPanel extends JPanel {
     
+    /** 查看代码结构按钮 */
     private final JButton viewStructureButton;
+    /** 查看原始返回结果按钮 */
     private final JButton viewRawResultButton;
+    /** 生成测试代码按钮 */
     private final JButton generateTestButton;
+    /** 预编译按钮 */
     private final JButton precompileButton;
+    /** 修复编译错误按钮 */
     private final JButton fixCompilationButton;
+    /** 插入空方法按钮 */
     private final JButton insertEmptyMethodButton;
+    /** 插入到文件按钮 */
     private final JButton insertToFileButton;
+    /** 创建测试文件按钮 */
     private final JButton createTestFileButton;
     
     /**
      * 构造方法
      */
     public ButtonPanel() {
-        setLayout(new FlowLayout(FlowLayout.RIGHT));
+        setLayout(new GridLayout(2, 1, 5, 5));
         
-        // 查看代码结构按钮
+        JPanel firstRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel secondRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        
         viewStructureButton = new JButton("查看代码结构");
-        add(viewStructureButton);
+        firstRowPanel.add(viewStructureButton);
         
-        // 查看需求返回信息按钮
         viewRawResultButton = new JButton("查看需求返回信息");
-        add(viewRawResultButton);
+        firstRowPanel.add(viewRawResultButton);
         
-        // 生成测试代码按钮
         generateTestButton = new JButton("生成测试代码");
-        add(generateTestButton);
+        firstRowPanel.add(generateTestButton);
         
-        // 预编译按钮
         precompileButton = new JButton("Pre-compile");
-        add(precompileButton);
+        secondRowPanel.add(precompileButton);
         
-        // 编译修复按钮
         fixCompilationButton = new JButton("Fix Compilation Error");
-        add(fixCompilationButton);
+        secondRowPanel.add(fixCompilationButton);
         
-        // 插入空方法按钮
         insertEmptyMethodButton = new JButton("Insert Empty Method");
-        add(insertEmptyMethodButton);
+        secondRowPanel.add(insertEmptyMethodButton);
         
-        // 插入到文件按钮
         insertToFileButton = new JButton("Insert to File");
-        add(insertToFileButton);
+        secondRowPanel.add(insertToFileButton);
         
-        // 创建测试文件按钮
         createTestFileButton = new JButton("Create Test File");
-        add(createTestFileButton);
+        secondRowPanel.add(createTestFileButton);
+        
+        add(firstRowPanel);
+        add(secondRowPanel);
     }
     
     /**
@@ -78,7 +84,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setGenerateTestListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : generateTestButton.getActionListeners()) {
             generateTestButton.removeActionListener(al);
         }
@@ -90,7 +95,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setPrecompileListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : precompileButton.getActionListeners()) {
             precompileButton.removeActionListener(al);
         }
@@ -102,7 +106,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setFixCompilationListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : fixCompilationButton.getActionListeners()) {
             fixCompilationButton.removeActionListener(al);
         }
@@ -114,7 +117,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setInsertEmptyMethodListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : insertEmptyMethodButton.getActionListeners()) {
             insertEmptyMethodButton.removeActionListener(al);
         }
@@ -126,7 +128,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setInsertToFileListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : insertToFileButton.getActionListeners()) {
             insertToFileButton.removeActionListener(al);
         }
@@ -138,7 +139,6 @@ public class ButtonPanel extends JPanel {
      * @param listener 监听器
      */
     public void setCreateTestFileListener(ActionListener listener) {
-        // 移除所有现有的监听器
         for (ActionListener al : createTestFileButton.getActionListeners()) {
             createTestFileButton.removeActionListener(al);
         }
@@ -171,5 +171,9 @@ public class ButtonPanel extends JPanel {
         insertEmptyMethodButton.setEnabled(enabled);
         insertToFileButton.setEnabled(enabled);
         createTestFileButton.setEnabled(enabled);
+    }
+    
+    public void setGenerateTestButtonEnabled(boolean enabled) {
+        generateTestButton.setEnabled(enabled);
     }
 }

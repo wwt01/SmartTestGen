@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 工具类，包含通用方法
  */
-public class Utils {
+public class CodeUtils {
 
     /**
      * 生成空方法代码
@@ -181,7 +181,9 @@ public class Utils {
      * 参数信息类，用于存储参数的名称和类型
      */
     public static class ParameterInfo {
+        /** 参数名 */
         public String name;
+        /** 参数类型 */
         public String type;
 
         public ParameterInfo(String name, String type) {
@@ -277,7 +279,7 @@ public class Utils {
          */
         public static String parseCodeStructure(String result) {
             // 简单的代码结构解析，实际项目中可能需要更复杂的解析
-            return Utils.parseCodeStructure(result);
+            return CodeUtils.parseCodeStructure(result);
         }
 
         /**
@@ -288,7 +290,7 @@ public class Utils {
          * @return 空方法代码
          */
         public static String generateEmptyMethodCode(String methodName, String returnType, List<ParameterInfo> parameters) {
-            return Utils.generateEmptyMethodCode(methodName, returnType, parameters);
+            return CodeUtils.generateEmptyMethodCode(methodName, returnType, parameters);
         }
     }
 }

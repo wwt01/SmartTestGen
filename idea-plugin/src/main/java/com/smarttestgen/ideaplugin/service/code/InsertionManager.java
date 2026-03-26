@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.code;
 
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
@@ -12,6 +12,7 @@ import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
+import com.smarttestgen.ideaplugin.service.file.FileFinderService;
 
 import javax.swing.*;
 import java.util.ArrayList;

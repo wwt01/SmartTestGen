@@ -19,7 +19,7 @@ public class TestGeneratorToolWindowFactory implements ToolWindowFactory {
         
         // 创建内容并添加到 ToolWindow
         ContentFactory contentFactory = ContentFactory.getInstance();
-        Content content = contentFactory.createContent(panel, "测试代码生成器", false);
+        Content content = contentFactory.createContent(panel, "Test Case Generator", false);
         toolWindow.getContentManager().addContent(content);
     }
     

@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.util;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -19,8 +19,10 @@ import java.util.function.Consumer;
  */
 public class ThreadPoolService {
     
+    /** 单例实例 */
     private static ThreadPoolService instance;
     
+    /** 后台任务执行器 */
     private final ExecutorService backgroundExecutor;
     
     private ThreadPoolService() {

@@ -13,15 +13,23 @@ import java.util.List;
  * 显示需求的结构化解析结果
  */
 public class StructuredResultPanel extends JPanel {
+    /** 按钮面板，包含所有操作按钮 */
     private final ButtonPanel buttonPanel;
+    /** 方法名输入框 */
     private JTextField methodNameField;
+    /** 返回类型输入框 */
     private JTextField returnTypeField;
+    /** 期望信息输入框 */
     private JTextField expectationField;
+    /** 参数名称输入框列表 */
     private List<JTextField> parameterNameFields = new ArrayList<>();
+    /** 参数类型输入框列表 */
     private List<JTextField> parameterTypeFields = new ArrayList<>();
+    /** 当前项目的代码结构信息 */
     private String codeStructure = "";
+    /** 后端返回的原始JSON结果 */
     private String rawResult = "";
-    private String selectedText = "";
+    /** 面板事件监听器 */
     private StructuredResultPanelListener listener;
     
     public interface StructuredResultPanelListener {
@@ -101,7 +109,6 @@ public class StructuredResultPanel extends JPanel {
     
     public void setData(String rawResult, String selectedText, String codeStructure) {
         this.rawResult = rawResult;
-        this.selectedText = selectedText;
         this.codeStructure = codeStructure;
         updateComponents();
     }
@@ -270,6 +277,10 @@ public class StructuredResultPanel extends JPanel {
         }
         parametersBuilder.append("]");
         return parametersBuilder.toString();
+    }
+    
+    public void setGenerateTestButtonEnabled(boolean enabled) {
+        buttonPanel.setGenerateTestButtonEnabled(enabled);
     }
     
     /**

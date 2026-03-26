@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.util;
 
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
@@ -7,6 +7,7 @@ import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.vfs.VirtualFileSystem;
+import com.smarttestgen.ideaplugin.service.file.PathService;
 
 import javax.swing.*;
 import java.util.ArrayList;

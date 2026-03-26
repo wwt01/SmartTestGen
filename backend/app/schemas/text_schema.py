@@ -8,8 +8,6 @@ class TextRequest(BaseModel):
     content: str = Field(..., description="IDEA 插件选中的自然语言需求内容")
     # 可选：扩展字段，比如用户标识
     user_id: Optional[str] = Field(None, description="可选：用户标识")
-    # 新增
-    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
 
 # 接收结构化信息的请求模型，用于生成 Java 单元测试代码11
 
@@ -19,12 +17,7 @@ class StructuredRequest(BaseModel):
     parameters: List[Dict[str, Any]] = Field(default_factory=list, description="参数信息列表，每个参数包含 name、type 和 constraints")
     return_type: str = Field(..., description="返回值类型")
     expectations: List[str] = Field(default_factory=list, description="断言逻辑列表")
-    class_name: Optional[str] = Field(None, description="类名，用于生成测试类")
-    is_interface: Optional[bool] = Field(False, description="是否为接口类，用于选择不同的提示词模板")
-    code_structure: Optional[str] = Field(None, description="代码结构信息，字符串形式")
-    file_content: Optional[str] = Field(None, description="需求注释所在文件的代码内容")
-    # 新增
-    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
+    session_id: str = Field(..., description="会话标识，用于获取静态上下文")
 
 # 统一响应模型
 
@@ -34,14 +27,20 @@ class TextResponse(BaseModel):
     msg: str = Field("success", description="响应信息")
     data: Optional[Dict[str, Any]] = Field(None, description="返回数据")
 
+
+class InitSessionRequest(BaseModel):
+    class_name: Optional[str] = Field(None, description="当前类名")
+    is_interface: Optional[bool] = Field(False, description="是否为接口类")
+    package_name: Optional[str] = Field("", description="包名")
+    class_type: Optional[str] = Field("Unknown", description="类类型：DTO/Service/Controller/Entity/VO等")
+    fields: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="字段列表")
+    methods: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="方法列表")
+    dependencies: Optional[List[str]] = Field(default_factory=list, description="依赖类列表")
+
 # 修复编译错误的请求模型
 
 
 class FixCompilationErrorRequest(BaseModel):
     code: str = Field(..., description="测试代码")
     error_message: str = Field(..., description="编译错误信息")
-    code_structure: Optional[str] = Field(None, description="代码结构信息")
-    current_class_name: Optional[str] = Field(None, description="当前类名")
-    is_interface_file: Optional[bool] = Field(False, description="是否是接口文件")
-    # 新增
-    session_id: Optional[str] = Field(None, description="会话标识，用于关联多轮对话上下文")
+    session_id: str = Field(..., description="会话标识，用于获取静态上下文")

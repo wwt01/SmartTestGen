@@ -1,20 +1,150 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.code;
 
+import com.smarttestgen.ideaplugin.model.ClassContextInfo;
+import com.smarttestgen.ideaplugin.model.FieldInfo;
+import com.smarttestgen.ideaplugin.model.MethodInfo;
+import com.smarttestgen.ideaplugin.model.ParameterInfo;
+import com.smarttestgen.ideaplugin.service.api.ApiService;
 import com.smarttestgen.ideaplugin.util.JsonUtils;
+import com.smarttestgen.ideaplugin.util.LogUtil;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 
 import javax.swing.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-/**
- * 测试代码生成服务类
- * 负责处理测试代码的生成请求和响应处理
- */
 public class TestCodeService {
     
-    /**
-     * 测试代码生成结果
-     */
+    private static String currentSessionId = null;
+    
+    public static String getCurrentSessionId() {
+        return currentSessionId;
+    }
+    
+    public static void setCurrentSessionId(String sessionId) {
+        currentSessionId = sessionId;
+    }
+    
+    public static class InitSessionResult {
+        private final String sessionId;
+        private final boolean success;
+        private final String errorMessage;
+        
+        public InitSessionResult(String sessionId) {
+            this.sessionId = sessionId;
+            this.success = true;
+            this.errorMessage = null;
+        }
+        
+        public InitSessionResult(String errorMessage, boolean failed) {
+            this.sessionId = null;
+            this.success = false;
+            this.errorMessage = errorMessage;
+        }
+        
+        public String getSessionId() { return sessionId; }
+        public boolean isSuccess() { return success; }
+        public String getErrorMessage() { return errorMessage; }
+    }
+    
+    public static void initSession(
+            ClassContextInfo classContextInfo,
+            Consumer<InitSessionResult> onSuccess,
+            Consumer<String> onError) {
+        
+        long startTime = System.currentTimeMillis();
+        LogUtil.section("初始化会话");
+        LogUtil.info("Session", "类名: " + classContextInfo.getClassName() + 
+                     ", 类型: " + classContextInfo.getClassType());
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                String requestBody = buildInitSessionRequest(classContextInfo);
+                LogUtil.request("InitSession", requestBody);
+                
+                String response = ApiService.initSession(requestBody);
+                LogUtil.response("InitSession", response);
+                
+                String sessionId = extractSessionId(response);
+                
+                if (sessionId != null && !sessionId.isEmpty()) {
+                    currentSessionId = sessionId;
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    LogUtil.success("Session", "会话ID: " + sessionId + " [" + elapsed + "ms]");
+                    ApplicationManager.getApplication().invokeLater(() -> 
+                        onSuccess.accept(new InitSessionResult(sessionId)), ModalityState.nonModal());
+                } else {
+                    String errorMsg = extractErrorMessage(response);
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    LogUtil.error("Session", "初始化失败 [" + elapsed + "ms]: " + errorMsg);
+                    ApplicationManager.getApplication().invokeLater(() -> 
+                        onError.accept(errorMsg != null ? errorMsg : "Failed to get session_id"), ModalityState.nonModal());
+                }
+                
+            } catch (Exception e) {
+                long elapsed = System.currentTimeMillis() - startTime;
+                LogUtil.error("Session", "异常 [" + elapsed + "ms]: " + e.getMessage());
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    onError.accept(e.getMessage()), ModalityState.nonModal());
+            }
+        });
+    }
+    
+    public static String buildInitSessionRequest(ClassContextInfo classInfo) {
+        String className = classInfo.getClassName() != null ? classInfo.getClassName() : "";
+        String packageName = classInfo.getPackageName() != null ? classInfo.getPackageName() : "";
+        String classType = classInfo.getClassType() != null ? classInfo.getClassType() : "Unknown";
+        boolean isInterface = classInfo.isInterface();
+        
+        String fieldsJson = buildFieldsJson(classInfo.getFields());
+        String methodsJson = buildMethodsJson(classInfo.getMethods());
+        String dependenciesJson = buildDependenciesJson(classInfo.getDependencies());
+        
+        return "{" +
+                "\"class_name\":\"" + escapeContent(className) + "\"," +
+                "\"is_interface\":" + isInterface + "," +
+                "\"package_name\":\"" + escapeContent(packageName) + "\"," +
+                "\"class_type\":\"" + escapeContent(classType) + "\"," +
+                "\"fields\":" + fieldsJson + "," +
+                "\"methods\":" + methodsJson + "," +
+                "\"dependencies\":" + dependenciesJson +
+                "}";
+    }
+    
+    private static String extractSessionId(String response) {
+        try {
+            String pattern = "\"session_id\":\"";
+            int startIndex = response.indexOf(pattern);
+            if (startIndex == -1) return null;
+            
+            startIndex += pattern.length();
+            int endIndex = response.indexOf("\"", startIndex);
+            if (endIndex == -1) return null;
+            
+            return response.substring(startIndex, endIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    private static String extractErrorMessage(String response) {
+        try {
+            String pattern = "\"msg\":\"";
+            int startIndex = response.indexOf(pattern);
+            if (startIndex == -1) return null;
+            
+            startIndex += pattern.length();
+            int endIndex = response.indexOf("\"", startIndex);
+            if (endIndex == -1) return null;
+            
+            return response.substring(startIndex, endIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
     public static class TestCodeResult {
         private final String testCode;
         private final String emptyMethodCode;
@@ -35,130 +165,71 @@ public class TestCodeService {
             this.errorMessage = errorMessage;
         }
         
-        public String getTestCode() {
-            return testCode;
-        }
-        
-        public String getEmptyMethodCode() {
-            return emptyMethodCode;
-        }
-        
-        public boolean isSuccess() {
-            return success;
-        }
-        
-        public String getErrorMessage() {
-            return errorMessage;
-        }
+        public String getTestCode() { return testCode; }
+        public String getEmptyMethodCode() { return emptyMethodCode; }
+        public boolean isSuccess() { return success; }
+        public String getErrorMessage() { return errorMessage; }
     }
     
-    /**
-     * 生成测试代码
-     * @param methodName 方法名
-     * @param returnType 返回类型
-     * @param parametersStr 参数字符串（JSON格式）
-     * @param expectationsStr 期望字符串
-     * @param codeStructure 代码结构
-     * @param currentClassName 当前类名
-     * @param isInterfaceFile 是否为接口文件
-     * @param onSuccess 成功回调
-     * @param onError 错误回调
-     */
-    public static void generateTestCode(
+    public static void generateTestCodeWithSession(
+            String sessionId,
             String methodName,
             String returnType,
             String parametersStr,
             String expectationsStr,
-            String codeStructure,
-            String currentClassName,
-            boolean isInterfaceFile,
             Consumer<TestCodeResult> onSuccess,
             Consumer<String> onError) {
         
+        long startTime = System.currentTimeMillis();
+        LogUtil.section("生成测试代码");
+        LogUtil.info("Generate", "方法: " + methodName + ", 返回类型: " + returnType);
+        
         CompletableFuture.runAsync(() -> {
             try {
-                // 构建请求体
-                String requestBody = buildTestRequest(
-                    methodName, 
-                    returnType, 
-                    parametersStr, 
-                    expectationsStr, 
-                    codeStructure,
-                    currentClassName,
-                    isInterfaceFile
-                );
+                String requestBody = buildTestRequestWithSession(sessionId, methodName, returnType, parametersStr, expectationsStr);
+                LogUtil.request("GenerateTest", requestBody);
                 
-                // 打印请求体
-        System.out.println("[Test Case Generator] Request Body Length: " + requestBody.length());
-        System.out.println("[Test Case Generator] Request Body: " + requestBody);
-                
-                // 调用后端接口
                 String response = ApiService.generateTestCode(requestBody);
+                LogUtil.response("GenerateTest", response);
                 
-                // 打印响应
-                System.out.println("[Test Case Generator] Response: " + 
-                    (response.length() > 500 ? response.substring(0, 500) + "..." : response));
-                
-                // 提取生成的测试代码和空方法代码
                 String generatedCode = JsonUtils.extractDataField(response, "test_code");
                 String emptyMethodCode = JsonUtils.extractDataField(response, "empty_method");
                 
-                // 打印提取结果
-                System.out.println("[Test Case Generator] Extracted test_code length: " + 
-                    (generatedCode != null ? generatedCode.length() : 0));
-                System.out.println("[Test Case Generator] Extracted empty_method length: " + 
-                    (emptyMethodCode != null ? emptyMethodCode.length() : 0));
+                long elapsed = System.currentTimeMillis() - startTime;
+                LogUtil.success("Generate", "测试代码长度: " + (generatedCode != null ? generatedCode.length() : 0) + 
+                               ", 空方法长度: " + (emptyMethodCode != null ? emptyMethodCode.length() : 0) + 
+                               " [" + elapsed + "ms]");
                 
-                // 反转义代码中的特殊字符
                 String unescapedCode = unescapeCode(generatedCode);
                 String unescapedEmptyMethodCode = unescapeCode(emptyMethodCode);
                 
-                // 创建结果对象
                 TestCodeResult result = new TestCodeResult(unescapedCode, unescapedEmptyMethodCode);
-                
-                // 在 EDT 线程中回调
-                SwingUtilities.invokeLater(() -> onSuccess.accept(result));
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    onSuccess.accept(result), ModalityState.nonModal());
                 
             } catch (Exception e) {
-                System.out.println("[Test Case Generator] Error generating test code: " + e.getMessage());
-                e.printStackTrace();
-                
-                // 在 EDT 线程中回调错误
-                SwingUtilities.invokeLater(() -> onError.accept(e.getMessage()));
+                long elapsed = System.currentTimeMillis() - startTime;
+                LogUtil.error("Generate", "异常 [" + elapsed + "ms]: " + e.getMessage());
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    onError.accept(e.getMessage()), ModalityState.nonModal());
             }
         });
     }
     
-    /**
-     * 构建测试请求
-     * @param methodName 方法名
-     * @param returnType 返回类型
-     * @param parametersStr 参数字符串
-     * @param expectationsStr 期望字符串
-     * @param codeStructure 代码结构
-     * @param currentClassName 当前类名
-     * @param isInterfaceFile 是否为接口文件
-     * @return 请求体
-     */
-    private static String buildTestRequest(
+    private static String buildTestRequestWithSession(
+            String sessionId,
             String methodName, 
             String returnType, 
             String parametersStr, 
-            String expectationsStr, 
-            String codeStructure,
-            String currentClassName,
-            boolean isInterfaceFile) {
+            String expectationsStr) {
         
-        // 使用从前端获取的实际参数数组
         String parametersArray = parametersStr;
         if (parametersArray == null || parametersArray.isEmpty()) {
             parametersArray = "[]";
         }
         
-        // 构建期望数组
         String expectationsArray = "[]";
         if (expectationsStr != null && !expectationsStr.isEmpty()) {
-            // 确保期望数组格式正确
             if (!expectationsStr.startsWith("[")) {
                 expectationsArray = "[" + expectationsStr + "]";
             } else {
@@ -166,50 +237,77 @@ public class TestCodeService {
             }
         }
         
-        // 获取当前编辑文件的内容
-        String fileContent = FileContentService.getCurrentFileContent();
-        
-        // 构建请求体
-        String className = currentClassName != null && !currentClassName.isEmpty() ? currentClassName : "TestClass";
-        System.out.println("[Test Case Generator] Using class name: " + className);
-        System.out.println("[Test Case Generator] Is interface: " + isInterfaceFile);
-        
-        // 确保expectationsArray是一个有效的JSON数组
         String expectationsJson = expectationsArray;
         if (expectationsJson.startsWith("\"")) {
-            // 如果是字符串形式的数组，去除引号
             expectationsJson = expectationsJson.substring(1, expectationsJson.length() - 1);
         }
         
-        String requestBody = "{" +
+        return "{" +
+                "\"session_id\":\"" + escapeContent(sessionId) + "\"," +
                 "\"method_name\":\"" + escapeContent(methodName) + "\"," +
                 "\"parameters\":" + parametersArray + "," +
                 "\"return_type\":\"" + escapeContent(returnType) + "\"," +
-                "\"expectations\":" + expectationsJson + "," +
-                "\"class_name\":\"" + escapeContent(className) + "\"," +
-                "\"is_interface\":" + isInterfaceFile + "," +
-                "\"code_structure\":\"" + escapeContent(codeStructure) + "\"," +
-                "\"file_content\":\"" + escapeContent(fileContent) + "\"" +
+                "\"expectations\":" + expectationsJson +
                 "}";
-        
-        // 打印请求体的长度和前1000个字符，以便排查问题
-        System.out.println("[Test Case Generator] Request Body Length: " + requestBody.length());
-        System.out.println("[Test Case Generator] Request Body (first 1000 chars): " + 
-            (requestBody.length() > 1000 ? requestBody.substring(0, 1000) + "..." : requestBody));
-        
-        return requestBody;
     }
     
-    /**
-     * 反转义代码中的特殊字符
-     * @param code 原始代码
-     * @return 反转义后的代码
-     */
-    private static String unescapeCode(String code) {
-        if (code == null) {
-            return null;
-        }
+    private static String buildFieldsJson(List<FieldInfo> fields) {
+        if (fields == null || fields.isEmpty()) return "[]";
         
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < fields.size(); i++) {
+            FieldInfo field = fields.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{\"name\":\"").append(escapeContent(field.getName())).append("\",");
+            sb.append("\"type\":\"").append(escapeContent(field.getType())).append("\"}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    
+    private static String buildMethodsJson(List<MethodInfo> methods) {
+        if (methods == null || methods.isEmpty()) return "[]";
+        
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < methods.size(); i++) {
+            MethodInfo method = methods.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{\"name\":\"").append(escapeContent(method.getName())).append("\",");
+            sb.append("\"return_type\":\"").append(escapeContent(method.getReturnType())).append("\",");
+            sb.append("\"parameters\":").append(buildParametersJson(method.getParameters())).append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    
+    private static String buildParametersJson(List<ParameterInfo> parameters) {
+        if (parameters == null || parameters.isEmpty()) return "[]";
+        
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < parameters.size(); i++) {
+            ParameterInfo param = parameters.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{\"name\":\"").append(escapeContent(param.getName())).append("\",");
+            sb.append("\"type\":\"").append(escapeContent(param.getType())).append("\"}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    
+    private static String buildDependenciesJson(List<String> dependencies) {
+        if (dependencies == null || dependencies.isEmpty()) return "[]";
+        
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < dependencies.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(escapeContent(dependencies.get(i))).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    
+    private static String unescapeCode(String code) {
+        if (code == null) return null;
         return code
             .replace("\\n", "\n")
             .replace("\\r", "\r")
@@ -220,82 +318,49 @@ public class TestCodeService {
             .replace("\\\\", "\\");
     }
     
-    /**
-     * 转义内容中的特殊字符
-     * @param content 原始内容
-     * @return 转义后的内容
-     */
     private static String escapeContent(String content) {
         if (content == null) return "";
-        
-        // 转义反斜杠
-        content = content.replace("\\", "\\\\");
-        
-        // 转义双引号
-        content = content.replace("\"", "\\\"");
-        
-        // 转义换行符
-        content = content.replace("\n", "\\n");
-        
-        // 转义回车符
-        content = content.replace("\r", "\\r");
-        
-        // 转义制表符
-        content = content.replace("\t", "\\t");
-        
-        // 转义其他可能导致JSON解析错误的字符
-        content = content.replace("\f", "\\f");
-        content = content.replace("\b", "\\b");
-        
-        return content;
+        return content
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+            .replace("\f", "\\f")
+            .replace("\b", "\\b");
     }
     
-    /**
-     * 修复编译错误
-     * @param requestBody 请求体
-     * @param onSuccess 成功回调
-     * @param onError 错误回调
-     */
-    public static void fixCompilationError(
+    public static void fixCompilationErrorWithSession(
             String requestBody,
             Consumer<TestCodeResult> onSuccess,
             Consumer<String> onError) {
         
+        long startTime = System.currentTimeMillis();
+        LogUtil.section("修复编译错误");
+        
         CompletableFuture.runAsync(() -> {
             try {
-                // 打印请求体
-                System.out.println("[Test Case Generator] Fix compilation error request body length: " + requestBody.length());
-                System.out.println("[Test Case Generator] Fix compilation error request body: " + requestBody);
+                LogUtil.request("FixError", requestBody);
                 
-                // 调用后端接口
                 String response = ApiService.fixCompilationError(requestBody);
+                LogUtil.response("FixError", response);
                 
-                // 打印响应
-                System.out.println("[Test Case Generator] Fix compilation error response: " + 
-                    (response.length() > 500 ? response.substring(0, 500) + "..." : response));
-                
-                // 提取修复后的测试代码
                 String fixedCode = JsonUtils.extractDataField(response, "test_code");
                 
-                // 打印提取结果
-                System.out.println("[Test Case Generator] Extracted fixed test_code length: " + 
-                    (fixedCode != null ? fixedCode.length() : 0));
+                long elapsed = System.currentTimeMillis() - startTime;
+                LogUtil.success("FixError", "修复后代码长度: " + (fixedCode != null ? fixedCode.length() : 0) + 
+                               " [" + elapsed + "ms]");
                 
-                // 反转义代码中的特殊字符
                 String unescapedCode = unescapeCode(fixedCode);
-                
-                // 创建结果对象
                 TestCodeResult result = new TestCodeResult(unescapedCode, null);
-                
-                // 在 EDT 线程中回调
-                SwingUtilities.invokeLater(() -> onSuccess.accept(result));
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    onSuccess.accept(result), ModalityState.nonModal());
                 
             } catch (Exception e) {
-                System.out.println("[Test Case Generator] Error fixing compilation error: " + e.getMessage());
-                e.printStackTrace();
-                
-                // 在 EDT 线程中回调错误
-                SwingUtilities.invokeLater(() -> onError.accept(e.getMessage()));
+                long elapsed = System.currentTimeMillis() - startTime;
+                LogUtil.error("FixError", "异常 [" + elapsed + "ms]: " + e.getMessage());
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    onError.accept(e.getMessage()), ModalityState.nonModal());
             }
         });
     }

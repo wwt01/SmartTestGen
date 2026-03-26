@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.api;
 
 import com.smarttestgen.ideaplugin.util.Constants;
 
@@ -13,6 +13,47 @@ import java.nio.charset.StandardCharsets;
  * API调用服务类
  */
 public class ApiService {
+    /**
+     * 初始化会话，存储静态上下文信息
+     * @param requestBody 请求体（包含类名、包名、字段、方法、依赖等）
+     * @return API响应结果（包含session_id）
+     * @throws Exception 异常
+     */
+    public static String initSession(String requestBody) throws Exception {
+        URL url = new URL(Constants.INIT_SESSION_URL);
+        
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setDoOutput(true);
+        
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = requestBody.getBytes("UTF-8");
+            os.write(input, 0, input.length);
+        }
+        
+        int responseCode = connection.getResponseCode();
+        
+        StringBuilder response = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
+            String responseLine = null;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+        }
+        
+        connection.disconnect();
+        
+        if (responseCode >= 300) {
+            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
+        }
+        
+        return response.toString();
+    }
+
     /**
      * 处理文本，调用后端API
      * @param content 文本内容
@@ -111,24 +152,6 @@ public class ApiService {
     }
     
     /**
-     * 修复编译错误，调用后端API
-     * @param code 测试代码
-     * @param errorMessage 编译错误信息
-     * @param codeStructure 代码结构
-     * @param currentClassName 当前类名
-     * @param isInterfaceFile 是否是接口文件
-     * @return API响应结果
-     * @throws Exception 异常
-     */
-    public static String fixCompilationError(String code, String errorMessage, String codeStructure, String currentClassName, boolean isInterfaceFile) throws Exception {
-        // 构建请求体
-        String requestBody = buildFixCompilationErrorRequestBody(code, errorMessage, codeStructure, currentClassName, isInterfaceFile);
-        
-        // 调用重载方法
-        return fixCompilationError(requestBody);
-    }
-    
-    /**
      * 修复编译错误，调用后端API（接受完整请求体）
      * @param requestBody 请求体
      * @return API响应结果
@@ -177,32 +200,6 @@ public class ApiService {
         }
         
         return response.toString();
-    }
-    
-    /**
-     * 构建修复编译错误的请求体
-     * @param code 测试代码
-     * @param errorMessage 编译错误信息
-     * @param codeStructure 代码结构
-     * @param currentClassName 当前类名
-     * @param isInterfaceFile 是否是接口文件
-     * @return 请求体字符串
-     */
-    private static String buildFixCompilationErrorRequestBody(String code, String errorMessage, String codeStructure, String currentClassName, boolean isInterfaceFile) {
-        // 转义特殊字符
-        String escapedCode = escapeContent(code);
-        String escapedErrorMessage = escapeContent(errorMessage);
-        String escapedCodeStructure = escapeContent(codeStructure);
-        String escapedCurrentClassName = escapeContent(currentClassName);
-        
-        // 构建JSON请求体
-        return "{" +
-                "\"code\": \"" + escapedCode + "\"," +
-                "\"error_message\": \"" + escapedErrorMessage + "\"," +
-                "\"code_structure\": \"" + escapedCodeStructure + "\"," +
-                "\"current_class_name\": \"" + escapedCurrentClassName + "\"," +
-                "\"is_interface_file\": " + isInterfaceFile +
-                "}";
     }
     
     /**

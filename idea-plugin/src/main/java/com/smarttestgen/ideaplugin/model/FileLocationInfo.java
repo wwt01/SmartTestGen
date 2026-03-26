@@ -6,11 +6,17 @@ import java.util.List;
  * 文件位置信息模型类
  */
 public class FileLocationInfo {
+    /** 文件完整路径 */
     private String filePath;
+    /** 文件名 */
     private String fileName;
+    /** 选中文本所在行号 */
     private int lineNumber;
+    /** 是否为接口类 */
     private boolean isInterface;
+    /** 类名 */
     private String className;
+    /** 实现该接口的类文件路径列表 */
     private List<String> implementationFiles;
 
     public FileLocationInfo() {

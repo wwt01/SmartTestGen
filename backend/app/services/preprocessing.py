@@ -30,6 +30,7 @@ class PreprocessingService:
         else:
             return "english"
 
+    # 清理文本中的乱码、特殊符号等干扰信息
     def clean_text(self, text: str) -> str:
         """清理文本中的乱码、特殊符号等干扰信息"""
         # 移除乱码和特殊符号
@@ -40,6 +41,7 @@ class PreprocessingService:
         cleaned = re.sub(r'\s+', ' ', cleaned).strip()
         return cleaned
 
+    # 使用规则库提取弱特征
     def extract_weak_features(self, text: str) -> Dict[str, Any]:
         """使用规则库提取弱特征"""
         # 检测语言
@@ -113,20 +115,21 @@ class PreprocessingService:
 
         return weak_features
 
+    # 完整的预处理流程
     def preprocess(self, text: str) -> Dict[str, Any]:
         """完整的预处理流程"""
         # 1. 清理文本
         cleaned_text = self.clean_text(text)
 
-        # 2. 提取弱特征
+        # 2. 检测语言
+        language = self._detect_language(cleaned_text)
+
+        # 3. 提取弱特征
         weak_features = self.extract_weak_features(cleaned_text)
 
         return {
             "original_text": text,
             "cleaned_text": cleaned_text,
+            "language": language,
             "weak_features": weak_features
         }
-
-
-# 实例化服务
-preprocessing_service = PreprocessingService()

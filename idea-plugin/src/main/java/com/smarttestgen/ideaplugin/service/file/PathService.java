@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.file;
 
 /**
  * 路径处理服务类

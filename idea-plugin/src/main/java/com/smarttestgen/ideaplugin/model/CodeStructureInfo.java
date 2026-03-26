@@ -7,7 +7,9 @@ import java.util.List;
  * 代码结构信息模型类
  */
 public class CodeStructureInfo {
+    /** 项目名称 */
     private String projectName;
+    /** 项目中的类信息列表 */
     private List<ClassInfo> classes;
     
     public CodeStructureInfo() {
@@ -72,7 +74,9 @@ public class CodeStructureInfo {
      * 类信息内部类
      */
     public static class ClassInfo {
+        /** 类名 */
         private String name;
+        /** 类中的方法信息列表 */
         private List<MethodInfo> methods;
         
         public ClassInfo() {
@@ -124,8 +128,11 @@ public class CodeStructureInfo {
      * 方法信息内部类
      */
     public static class MethodInfo {
+        /** 方法名 */
         private String name;
+        /** 返回类型 */
         private String returnType;
+        /** 方法参数信息列表 */
         private List<ParameterInfo> parameters;
         
         public MethodInfo() {
@@ -191,7 +198,9 @@ public class CodeStructureInfo {
      * 参数信息内部类
      */
     public static class ParameterInfo {
+        /** 参数名 */
         private String name;
+        /** 参数类型 */
         private String type;
         
         public ParameterInfo(String name, String type) {

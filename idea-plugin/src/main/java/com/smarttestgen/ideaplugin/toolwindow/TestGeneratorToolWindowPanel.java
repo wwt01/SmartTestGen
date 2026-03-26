@@ -1,15 +1,18 @@
 package com.smarttestgen.ideaplugin.toolwindow;
 
-import com.smarttestgen.ideaplugin.service.code.InsertionManager;
-import com.smarttestgen.ideaplugin.toolwindow.components.CodeEditorPanel;
-import com.smarttestgen.ideaplugin.toolwindow.components.InfoPanel;
+import com.smarttestgen.ideaplugin.model.ClassContextInfo;
 import com.smarttestgen.ideaplugin.model.FileLocationInfo;
 import com.smarttestgen.ideaplugin.service.code.CodeStructureService;
-import com.smarttestgen.ideaplugin.service.file.FileLocationService;
+import com.smarttestgen.ideaplugin.service.code.InsertionManager;
 import com.smarttestgen.ideaplugin.service.code.TestCodeService;
+import com.smarttestgen.ideaplugin.service.file.FileLocationService;
 import com.smarttestgen.ideaplugin.service.util.TestFileCreatorService;
 import com.smarttestgen.ideaplugin.service.util.ThreadPoolService;
+import com.smarttestgen.ideaplugin.toolwindow.components.CodeEditorPanel;
+import com.smarttestgen.ideaplugin.toolwindow.components.InfoPanel;
 import com.smarttestgen.ideaplugin.toolwindow.components.StructuredResultPanel;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 
@@ -17,37 +20,51 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 测试代码生成器 ToolWindow 面板
  * 包含 ResultDialog 的所有功能
  */
 public class TestGeneratorToolWindowPanel extends JPanel implements StructuredResultPanel.StructuredResultPanelListener {
+    /** 当前项目实例 */
     private final Project project;
+    /** 后端返回的原始JSON结果 */
     private String rawResult = "";
+    /** 当前项目的代码结构信息 */
     private String codeStructure = "";
+    /** 用户选中的需求文本 */
     private String selectedText = "";
     
-    // 保存生成的空方法代码，用于后续插入
+    /** 生成的空方法代码，用于后续插入到源文件 */
     private String generatedEmptyMethodCode = "";
     
-    // 保存选中文本所在文件的信息
+    /** 选中文本所在文件的完整路径 */
     private String selectedFilePath = "";
+    /** 选中文本所在的文件名 */
     private String selectedFileName = "";
+    /** 选中文本所在的行号 */
     private int selectedLineNumber = -1;
+    /** 选中文本所在文件是否为接口类 */
     private boolean isInterfaceFile = false;
+    /** 选中文本所在的类名 */
     private String currentClassName = "";
+    /** 实现该接口的类文件路径列表 */
     private List<String> implementationFiles = new ArrayList<>();
     
-    // UI 组件
+    /** 信息面板，显示文件位置信息 */
     private InfoPanel infoPanel;
+    /** 代码编辑器面板，显示生成的测试代码 */
     private CodeEditorPanel codeEditorPanel;
+    /** 结构化结果面板，显示解析后的需求信息 */
     private StructuredResultPanel structuredResultPanel;
     
-    // 选择范围
-    private int selectionStart = -1;
-    private int selectionEnd = -1;
-    
+    /** 初始化会话的 Future，用于异步等待 */
+    private CompletableFuture<String> initSessionFuture = null;
+    /** 初始化会话是否完成 */
+    private boolean sessionInitialized = false;
+
     /**
      * 构造方法
      * @param project 当前项目
@@ -56,7 +73,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         super(new BorderLayout());
         this.project = project;
         
-        // 初始化UI
+        // 初始化 UI
         initUI();
     }
     
@@ -83,6 +100,8 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         
         add(scrollPane, BorderLayout.CENTER);
+        
+        structuredResultPanel.setGenerateTestButtonEnabled(false);
     }
     
     /**
@@ -115,8 +134,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         System.out.println("[Test Case Generator] Setting data in ToolWindowPanel");
         
         this.rawResult = rawResult;
-        this.selectionStart = selectionStart;
-        this.selectionEnd = selectionEnd;
+        // 选择范围
         this.selectedText = selectedText;
         
         // 重置文件信息变量
@@ -125,6 +143,13 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         selectedLineNumber = -1;
         isInterfaceFile = false;
         implementationFiles.clear();
+        
+        // 重置代码区，填充提示注释
+        resetCodeEditor();
+        
+        // 禁用生成测试代码按钮，等待会话初始化完成
+        structuredResultPanel.setGenerateTestButtonEnabled(false);
+        sessionInitialized = false;
         
         // 获取文件位置信息
         System.out.println("[Test Case Generator] Getting file location info...");
@@ -146,6 +171,21 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         parseCodeStructure();
         
         System.out.println("[Test Case Generator] Data set successfully");
+    }
+    
+    /**
+     * 重置代码编辑器，填充提示注释
+     */
+    private void resetCodeEditor() {
+        if (codeEditorPanel != null) {
+            String testCodeHint = "// Click 'Generate Test Code' button to generate test code";
+            String emptyMethodHint = "// Click 'Generate Test Code' button to generate empty method code";
+            
+            codeEditorPanel.setTestCode(testCodeHint);
+            codeEditorPanel.setEmptyMethodCode(emptyMethodHint);
+            
+            generatedEmptyMethodCode = null;
+        }
     }
     
     /**
@@ -174,6 +214,91 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
             
             // 更新结构化结果面板
             structuredResultPanel.setData(rawResult, selectedText, codeStructure);
+            
+            // 异步初始化会话
+            initSessionAsync();
+        });
+    }
+    
+    /**
+     * 异步初始化会话
+     */
+    private void initSessionAsync() {
+        ClassContextInfo classInfo = CodeStructureService.getCurrentClassInfo();
+        if (classInfo == null) {
+            System.out.println("[Init Session] No class context info available");
+            return;
+        }
+        
+        initSessionFuture = new CompletableFuture<>();
+        sessionInitialized = false;
+        
+        System.out.println("[Init Session] Starting async session initialization...");
+        
+        TestCodeService.initSession(
+            classInfo,
+            result -> {
+                if (result.isSuccess()) {
+                    sessionInitialized = true;
+                    initSessionFuture.complete(result.getSessionId());
+                    System.out.println("[Init Session] Session initialized successfully: " + result.getSessionId());
+                    
+                    ApplicationManager.getApplication().invokeLater(() -> 
+                        structuredResultPanel.setGenerateTestButtonEnabled(true),
+                        ModalityState.nonModal());
+                } else {
+                    initSessionFuture.completeExceptionally(new Exception(result.getErrorMessage()));
+                    System.out.println("[Init Session] Session initialization failed: " + result.getErrorMessage());
+                }
+            },
+            error -> {
+                initSessionFuture.completeExceptionally(new Exception(error));
+                System.out.println("[Init Session] Session initialization error: " + error);
+            }
+        );
+    }
+    
+    /**
+     * 异步等待会话初始化完成，支持重试
+     * @param maxRetries 最大重试次数
+     * @param callback 回调函数，参数为 session_id 或 null（如果失败）
+     */
+    private void waitForSessionInitAsync(int maxRetries, java.util.function.Consumer<String> callback) {
+        if (sessionInitialized && TestCodeService.getCurrentSessionId() != null) {
+            callback.accept(TestCodeService.getCurrentSessionId());
+            return;
+        }
+        
+        waitForSessionInitRetry(0, maxRetries, callback);
+    }
+    
+    /**
+     * 递归重试等待会话初始化
+     */
+    private void waitForSessionInitRetry(int currentRetry, int maxRetries, java.util.function.Consumer<String> callback) {
+        if (currentRetry > 0) {
+            System.out.println("[Init Session] Retry " + currentRetry + "/" + maxRetries);
+            initSessionAsync();
+        }
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                String sessionId = initSessionFuture.get(10, TimeUnit.SECONDS);
+                if (sessionId != null && !sessionId.isEmpty()) {
+                    SwingUtilities.invokeLater(() -> callback.accept(sessionId));
+                } else if (currentRetry < maxRetries) {
+                    SwingUtilities.invokeLater(() -> waitForSessionInitRetry(currentRetry + 1, maxRetries, callback));
+                } else {
+                    SwingUtilities.invokeLater(() -> callback.accept(null));
+                }
+            } catch (Exception e) {
+                System.out.println("[Init Session] Wait failed: " + e.getMessage());
+                if (currentRetry < maxRetries) {
+                    SwingUtilities.invokeLater(() -> waitForSessionInitRetry(currentRetry + 1, maxRetries, callback));
+                } else {
+                    SwingUtilities.invokeLater(() -> callback.accept(null));
+                }
+            }
         });
     }
     
@@ -211,79 +336,86 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
      * 生成测试代码
      */
     private void generateTestCode() {
-        // 获取父窗口
         Window parentWindow = SwingUtilities.getWindowAncestor(this);
-        Frame parentFrame = parentWindow instanceof Frame ? (Frame) parentWindow : null;
         
-        // 显示加载中提示
-        final JDialog loadingDialog = createLoadingDialog(parentWindow, "Generating test code...");
+        final JDialog loadingDialog = createLoadingDialog(parentWindow, "Initializing session...");
         loadingDialog.setVisible(true);
         
-        // 从面板中获取最新的结构化信息
         String methodName = structuredResultPanel.getMethodName();
         String returnType = structuredResultPanel.getReturnType();
         String expectationsStr = structuredResultPanel.getExpectations();
         String parametersStr = structuredResultPanel.buildParametersJson();
         
-        // 打印提取的信息
         System.out.println("[Test Case Generator] Method Name: " + methodName);
         System.out.println("[Test Case Generator] Return Type: " + returnType);
         System.out.println("[Test Case Generator] Parameters: " + parametersStr);
         System.out.println("[Test Case Generator] Expectations: " + expectationsStr);
         
-        // 使用 TestCodeService 生成测试代码
-        TestCodeService.generateTestCode(
-            methodName,
-            returnType,
-            parametersStr,
-            expectationsStr,
-            codeStructure,
-            currentClassName,
-            isInterfaceFile,
-            result -> {
-                // 成功回调
+        waitForSessionInitAsync(2, sessionId -> {
+            if (sessionId == null) {
                 loadingDialog.dispose();
-                
-                // 检查编辑器状态
-                if (codeEditorPanel == null) {
-                    System.out.println("[Test Case Generator] ERROR: codeEditorPanel is null");
-                    Messages.showErrorDialog("Error: Code editor not initialized", "Error");
-                    return;
-                }
-                
-                String testCode = result.getTestCode();
-                String emptyMethodCode = result.getEmptyMethodCode();
-                
-                try {
-                    // 使用 CodeEditorPanel 设置代码
-                    codeEditorPanel.setTestCode(testCode != null ? testCode : "No test code generated");
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    Messages.showErrorDialog("Failed to initialize session after retries. Please try again.", "Error"),
+                    ModalityState.nonModal());
+                return;
+            }
+            
+            loadingDialog.setTitle("Generating test code...");
+            
+            System.out.println("[Test Case Generator] Using session_id: " + sessionId);
+            
+            TestCodeService.generateTestCodeWithSession(
+                sessionId,
+                methodName,
+                returnType,
+                parametersStr,
+                expectationsStr,
+                result -> {
+                    loadingDialog.dispose();
                     
-                    // 更新空方法编辑器内容
-                    String emptyMethodText = emptyMethodCode != null && !emptyMethodCode.isEmpty() ? 
-                        emptyMethodCode : "No empty method generated";
-                    codeEditorPanel.setEmptyMethodCode(emptyMethodText);
-                    
-                    System.out.println("[Test Case Generator] Editor content updated successfully");
-                    
-                    // 保存生成的空方法代码，用于后续插入
-                    if (emptyMethodCode != null && !emptyMethodCode.isEmpty()) {
-                        generatedEmptyMethodCode = emptyMethodCode;
+                    if (codeEditorPanel == null) {
+                        System.out.println("[Test Case Generator] ERROR: codeEditorPanel is null");
+                        ApplicationManager.getApplication().invokeLater(() -> 
+                            Messages.showErrorDialog("Error: Code editor not initialized", "Error"),
+                            ModalityState.nonModal());
+                        return;
                     }
                     
-                    // 显示成功消息
-                    Messages.showInfoMessage("Test code generated successfully!", "Success");
-                } catch (Exception ex) {
-                    System.out.println("[Test Case Generator] ERROR updating editor: " + ex.getMessage());
-                    ex.printStackTrace();
-                    Messages.showErrorDialog("Error updating code editor: " + ex.getMessage(), "Error");
+                    String testCode = result.getTestCode();
+                    String emptyMethodCode = result.getEmptyMethodCode();
+                    
+                    try {
+                        codeEditorPanel.setTestCode(testCode != null ? testCode : "No test code generated");
+                        
+                        String emptyMethodText = emptyMethodCode != null && !emptyMethodCode.isEmpty() ? 
+                            emptyMethodCode : "No empty method generated";
+                        codeEditorPanel.setEmptyMethodCode(emptyMethodText);
+                        
+                        System.out.println("[Test Case Generator] Editor content updated successfully");
+                        
+                        if (emptyMethodCode != null && !emptyMethodCode.isEmpty()) {
+                            generatedEmptyMethodCode = emptyMethodCode;
+                        }
+                        
+                        ApplicationManager.getApplication().invokeLater(() -> 
+                            Messages.showInfoMessage("Test code generated successfully!", "Success"),
+                            ModalityState.nonModal());
+                    } catch (Exception ex) {
+                        System.out.println("[Test Case Generator] ERROR updating editor: " + ex.getMessage());
+                        ex.printStackTrace();
+                        ApplicationManager.getApplication().invokeLater(() -> 
+                            Messages.showErrorDialog("Error updating code editor: " + ex.getMessage(), "Error"),
+                            ModalityState.nonModal());
+                    }
+                },
+                errorMessage -> {
+                    loadingDialog.dispose();
+                    ApplicationManager.getApplication().invokeLater(() -> 
+                        Messages.showErrorDialog("Error generating test code: " + errorMessage, "Error"),
+                        ModalityState.nonModal());
                 }
-            },
-            errorMessage -> {
-                // 错误回调
-                loadingDialog.dispose();
-                Messages.showErrorDialog("Error generating test code: " + errorMessage, "Error");
-            }
-        );
+            );
+        });
     }
     
     /**
@@ -390,23 +522,27 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
                 System.out.println("[Test Case Generator] Compilation check completed with " + compilationErrors.size() + " errors");
                 loadingDialog.dispose();
                 
-                if (!compilationErrors.isEmpty()) {
-                    StringBuilder errorMessage = new StringBuilder("Compilation errors found:\n\n");
-                    for (String error : compilationErrors) {
-                        errorMessage.append("- ").append(error).append("\n");
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    if (!compilationErrors.isEmpty()) {
+                        StringBuilder errorMessage = new StringBuilder("Compilation errors found:\n\n");
+                        for (String error : compilationErrors) {
+                            errorMessage.append("- ").append(error).append("\n");
+                        }
+                        errorMessage.append("\nPlease review and fix the errors in the code.");
+                        
+                        Messages.showErrorDialog(errorMessage.toString(), "Compilation Errors");
+                    } else {
+                        Messages.showInfoMessage("No compilation errors found!\n\nThe code appears to be syntactically correct.", "Success");
                     }
-                    errorMessage.append("\nPlease review and fix the errors in the code.");
-                    
-                    Messages.showErrorDialog(errorMessage.toString(), "Compilation Errors");
-                } else {
-                    Messages.showInfoMessage("No compilation errors found!\n\nThe code appears to be syntactically correct.", "Success");
-                }
+                }, ModalityState.nonModal());
             },
             e -> {
                 System.out.println("[Test Case Generator] Error in precompileCode: " + e.getMessage());
                 e.printStackTrace();
                 loadingDialog.dispose();
-                Messages.showErrorDialog("Error checking code: " + e.getMessage(), "Error");
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    Messages.showErrorDialog("Error checking code: " + e.getMessage(), "Error"),
+                    ModalityState.nonModal());
             }
         );
     }
@@ -530,75 +666,116 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
     private void fixCompilationError() {
         System.out.println("[Test Case Generator] Fix compilation error button clicked");
         
-        // 获取编辑器中的代码
         if (codeEditorPanel == null) {
             System.out.println("[Test Case Generator] Code editor not initialized");
-            Messages.showErrorDialog("Code editor not initialized", "Error");
+            ApplicationManager.getApplication().invokeLater(() -> 
+                Messages.showErrorDialog("Code editor not initialized", "Error"),
+                ModalityState.nonModal());
             return;
         }
         
         String code = codeEditorPanel.getTestCode();
         
-        // 检查代码是否为空
         if (code == null || code.isEmpty()) {
             System.out.println("[Test Case Generator] No code to fix");
-            Messages.showInfoMessage("No code to fix", "Information");
+            ApplicationManager.getApplication().invokeLater(() -> 
+                Messages.showWarningDialog("No code in the editor. Please generate test code first.", "Warning"),
+                ModalityState.nonModal());
             return;
         }
         
-        // 检查是否是默认提示文本
-        if (code.equals("Click 'Generate Test Code' button to generate test code")) {
-            System.out.println("[Test Case Generator] Default text found, no code to fix");
-            Messages.showInfoMessage("Please generate test code first before fixing compilation errors.", "Information");
+        if (isOnlyComments(code)) {
+            System.out.println("[Test Case Generator] Only comments found, no actual code to fix");
+            ApplicationManager.getApplication().invokeLater(() -> 
+                Messages.showWarningDialog("No actual code in the editor. Please generate test code first.", "Warning"),
+                ModalityState.nonModal());
             return;
         }
         
-        // 获取控制台信息
         String consoleOutput = getConsoleOutput();
         
-        // 检查控制台信息
         if (consoleOutput == null || consoleOutput.isEmpty()) {
             System.out.println("[Test Case Generator] No console output found");
-            Messages.showWarningDialog("No console output found. Please run the project first.", "Warning");
+            ApplicationManager.getApplication().invokeLater(() -> 
+                Messages.showWarningDialog("No console output found. Please run the project first.", "Warning"),
+                ModalityState.nonModal());
             return;
         }
         
-        // 判断是否是报错信息
         boolean hasError = consoleOutput.contains("error:") || consoleOutput.contains("Exception in thread") || consoleOutput.contains("Compilation failed");
         
         if (!hasError) {
             System.out.println("[Test Case Generator] No compilation errors found in console output");
-            Messages.showInfoMessage("No compilation errors found in console output.", "Information");
+            ApplicationManager.getApplication().invokeLater(() -> 
+                Messages.showInfoMessage("No compilation errors found in console output.", "Information"),
+                ModalityState.nonModal());
             return;
         }
         
-        // 显示加载中提示
         Window parentWindow = SwingUtilities.getWindowAncestor(this);
         JDialog loadingDialog = createLoadingDialog(parentWindow, "Fixing compilation errors...");
         loadingDialog.setVisible(true);
         
-        // 构建请求体
-        String requestBody = buildFixCompilationErrorRequest(code, consoleOutput);
+        String existingSessionId = TestCodeService.getCurrentSessionId();
+        if (existingSessionId != null) {
+            executeFixCompilationError(existingSessionId, code, consoleOutput, loadingDialog);
+        } else {
+            waitForSessionInitAsync(2, sessionId -> {
+                if (sessionId == null) {
+                    loadingDialog.dispose();
+                    ApplicationManager.getApplication().invokeLater(() -> 
+                        Messages.showErrorDialog("Failed to initialize session. Please try again.", "Error"),
+                        ModalityState.nonModal());
+                    return;
+                }
+                executeFixCompilationError(sessionId, code, consoleOutput, loadingDialog);
+            });
+        }
+    }
+    
+    private boolean isOnlyComments(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            return true;
+        }
         
-        // 调用后端接口
-        TestCodeService.fixCompilationError(
+        String[] lines = code.split("\n");
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            if (trimmedLine.isEmpty()) {
+                continue;
+            }
+            if (!trimmedLine.startsWith("//") && !trimmedLine.startsWith("/*") && !trimmedLine.startsWith("*") && !trimmedLine.endsWith("*/")) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * 执行修复编译错误
+     */
+    private void executeFixCompilationError(String sessionId, String code, String consoleOutput, JDialog loadingDialog) {
+        String requestBody = buildFixCompilationErrorRequest(code, consoleOutput, sessionId);
+        
+        TestCodeService.fixCompilationErrorWithSession(
             requestBody,
             result -> {
                 loadingDialog.dispose();
                 
-                // 清空文件内容
                 codeEditorPanel.setTestCode("");
                 
-                // 填充修复后的代码
                 String fixedCode = result.getTestCode();
                 codeEditorPanel.setTestCode(fixedCode != null ? fixedCode : "Failed to fix compilation error");
                 
-                // 显示成功消息
-                Messages.showInfoMessage("Compilation error fixed successfully!", "Success");
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    Messages.showInfoMessage("Compilation error fixed successfully!", "Success"),
+                    ModalityState.nonModal());
             },
             errorMessage -> {
                 loadingDialog.dispose();
-                Messages.showErrorDialog("Error fixing compilation error: " + errorMessage, "Error");
+                ApplicationManager.getApplication().invokeLater(() -> 
+                    Messages.showErrorDialog("Error fixing compilation error: " + errorMessage, "Error"),
+                    ModalityState.nonModal());
             }
         );
     }
@@ -620,19 +797,18 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
     }
     
     /**
-     * 构建修复编译错误的请求体
+     * 构建修复编译错误的请求体（精简版，使用 session_id）
      * @param code 测试代码
      * @param errorMessage 错误信息
+     * @param sessionId 会话ID
      * @return 请求体
      */
-    private String buildFixCompilationErrorRequest(String code, String errorMessage) {
+    private String buildFixCompilationErrorRequest(String code, String errorMessage, String sessionId) {
         StringBuilder requestBody = new StringBuilder();
         requestBody.append("{");
         requestBody.append("\"code\":\"").append(escapeContent(code)).append("\",");
         requestBody.append("\"error_message\":\"").append(escapeContent(errorMessage)).append("\",");
-        requestBody.append("\"code_structure\":\"").append(escapeContent(codeStructure)).append("\",");
-        requestBody.append("\"current_class_name\":\"").append(escapeContent(currentClassName)).append("\",");
-        requestBody.append("\"is_interface_file\":").append(isInterfaceFile);
+        requestBody.append("\"session_id\":\"").append(escapeContent(sessionId)).append("\"");
         requestBody.append("}");
         return requestBody.toString();
     }

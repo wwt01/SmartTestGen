@@ -1,4 +1,4 @@
-package com.smarttestgen.ideaplugin.service;
+package com.smarttestgen.ideaplugin.service.file;
 
 import com.intellij.openapi.vfs.VirtualFile;
 
