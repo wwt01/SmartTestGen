@@ -5,7 +5,7 @@ import os
 from typing import Dict, Any, List
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, FewShotChatMessagePromptTemplate
@@ -43,42 +43,22 @@ class LLMService:
         self.examples = self._load_examples()
         self.prompts = self._load_prompts()
 
-        # 初始化会话存储
         self.store: Dict[str, InMemoryHistory] = {}
 
-        # 根据配置选择本地模型或云端模型
-        if settings.USE_LOCAL_LLM:
-            logger.info("Using local LLM (Ollama)")
-            logger.info(f"Local LLM URL: {settings.LOCAL_LLM_URL}")
-            logger.info(f"Local LLM Model: {settings.LOCAL_LLM_MODEL}")
+        logger.info("Using DeepSeek LLM")
+        logger.info(f"LLM URL: {settings.LLM_API_URL}")
+        logger.info(f"LLM Model: {settings.LLM_MODEL}")
 
-            # 本地模型不需要真实API Key，但LangChain要求必须提供
-            self.llm = ChatOpenAI(
-                api_key="ollama",
-                base_url=settings.LOCAL_LLM_URL,
-                model=settings.LOCAL_LLM_MODEL,
-                temperature=0.3,
-                max_tokens=2000,
-                top_p=0.9,
-                timeout=settings.LLM_TIMEOUT
-            )
-        else:
-            logger.info("Using cloud LLM (DeepSeek/Qwen)")
-            logger.info(f"Cloud LLM URL: {settings.LLM_API_URL}")
-            logger.info(f"Cloud LLM Model: {settings.LLM_MODEL}")
+        self.llm = ChatOpenAI(
+            api_key=settings.DASHSCOPE_API_KEY,
+            base_url=settings.LLM_API_URL,
+            model=settings.LLM_MODEL,
+            temperature=0.3,
+            max_tokens=2000,
+            top_p=0.9,
+            timeout=settings.LLM_TIMEOUT
+        )
 
-            # 云端模型需要API Key
-            self.llm = ChatOpenAI(
-                api_key=settings.DASHSCOPE_API_KEY,
-                base_url=settings.LLM_API_URL,
-                model=settings.LLM_MODEL,
-                temperature=0.3,
-                max_tokens=2000,
-                top_p=0.9,
-                timeout=settings.LLM_TIMEOUT
-            )
-
-        # 创建JSON输出解析器
         self.json_parser = JsonOutputParser()
 
     def get_session_history(self, session_id: str) -> BaseChatMessageHistory:
@@ -90,18 +70,18 @@ class LLMService:
         """初始化会话，存储静态上下文信息，返回session_id"""
         import uuid
         session_id = str(uuid.uuid4())
-        
+
         fields = context_data.get("fields", [])
         methods = context_data.get("methods", [])
         dependencies = context_data.get("dependencies", [])
-        
+
         logger.info(f"初始化数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
-        
+
         fields, methods = self.filter_private_members(fields, methods)
         dependencies = self.filter_relevant_dependencies(dependencies, methods, fields)
-        
+
         logger.info(f"过滤后存储: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
-        
+
         history = self.get_session_history(session_id)
         history.static_context = {
             "class_name": context_data.get("class_name", ""),
@@ -112,13 +92,13 @@ class LLMService:
             "methods": methods,
             "dependencies": dependencies
         }
-        
+
         logger.info("=" * 60)
         logger.info("会话初始化成功")
         logger.info(f"Session ID: {session_id}")
         logger.info(f"类名: {context_data.get('class_name')} | 类型: {context_data.get('class_type')}")
         logger.info("=" * 60)
-        
+
         return session_id
 
     def get_static_context(self, session_id: str) -> Dict[str, Any]:
@@ -130,11 +110,11 @@ class LLMService:
     def filter_private_members(self, fields: List[Dict], methods: List[Dict]) -> tuple:
         """过滤private成员，只保留public/protected"""
         filtered_fields = [
-            f for f in fields 
+            f for f in fields
             if f.get('visibility', 'public') in ['public', 'protected']
         ]
         filtered_methods = [
-            m for m in methods 
+            m for m in methods
             if m.get('visibility', 'public') in ['public', 'protected']
         ]
         return filtered_fields, filtered_methods
@@ -144,28 +124,28 @@ class LLMService:
         relevant = []
         for m in methods:
             name = m.get('name', '')
-            
+
             if name == target_method_name:
                 relevant.append(m)
                 continue
-            
+
             if name in ['<init>', 'constructor'] or name == class_name:
                 relevant.append(m)
                 continue
-            
+
             if name.startswith('get') or name.startswith('set') or name.startswith('is'):
                 relevant.append(m)
                 continue
-            
+
             if len(relevant) < 8:
                 relevant.append(m)
-        
+
         return relevant
 
     def filter_relevant_dependencies(self, dependencies: List[str], methods: List[Dict], fields: List[Dict]) -> List[str]:
         """只保留在相关方法和字段中使用的依赖"""
         used_types = set()
-        
+
         for m in methods:
             for p in m.get('parameters', []):
                 param_type = p.get('type', '')
@@ -174,17 +154,17 @@ class LLMService:
             return_type = m.get('return_type', '')
             if return_type:
                 used_types.add(return_type)
-        
+
         for f in fields:
             field_type = f.get('type', '')
             if field_type:
                 used_types.add(field_type)
-        
+
         relevant_deps = []
         for dep in dependencies:
             if any(dep in used_type or used_type.endswith(dep) for used_type in used_types):
                 relevant_deps.append(dep)
-        
+
         return relevant_deps
 
     def _load_examples(self) -> Dict[str, Any]:
@@ -581,7 +561,7 @@ Generate the complete Java unit test code."""
 
         try:
             logger.info("Calling LLM for fixing compilation error with LangChain")
-            
+
             variables = {
                 "code": code,
                 "error_message": error_message,
@@ -593,7 +573,7 @@ Generate the complete Java unit test code."""
                 "methods": formatted_methods,
                 "dependencies": formatted_dependencies
             }
-            
+
             if session_id:
                 logger.info(f"Using session memory for session_id: {session_id}")
 
@@ -625,7 +605,7 @@ Generate the complete Java unit test code."""
                 chain = prompt_template_obj | self.llm
 
                 response = chain.invoke(variables)
-            
+
             fixed_code = response.content
 
             logger.info(f"LLM response received, length: {len(fixed_code)}")
