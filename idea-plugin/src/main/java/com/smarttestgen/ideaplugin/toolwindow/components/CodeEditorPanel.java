@@ -27,6 +27,9 @@ public class CodeEditorPanel extends JPanel {
     private final Font normalFont;
     private boolean isTestCodeSelected = true;
     
+    private JTextArea compilationErrorArea;
+    private String lastCompilationError = "";
+    
     private static final Color SELECTED_BG = JBColor.namedColor("EditorTabs.selectedBackground", JBColor.WHITE);
     private static final Color UNSELECTED_BG = JBColor.namedColor("EditorTabs.background", new JBColor(new Color(240, 240, 240), new Color(60, 63, 65)));
     private static final Color BORDER_COLOR = JBColor.namedColor("EditorTabs.borderColor", JBColor.GRAY);
@@ -77,8 +80,57 @@ public class CodeEditorPanel extends JPanel {
         tabPanel.add(Box.createHorizontalStrut(5));
         tabPanel.add(emptyMethodTab);
         
-        add(tabPanel, BorderLayout.NORTH);
-        add(codeCardPanel, BorderLayout.CENTER);
+        JPanel errorPanel = createCompilationErrorPanel();
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(tabPanel, BorderLayout.NORTH);
+        centerPanel.add(codeCardPanel, BorderLayout.CENTER);
+        centerPanel.add(errorPanel, BorderLayout.SOUTH);
+        
+        add(centerPanel, BorderLayout.CENTER);
+    }
+    
+    private JPanel createCompilationErrorPanel() {
+        JPanel errorPanel = new JPanel(new BorderLayout());
+        errorPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(JBColor.RED, 1),
+            "Compilation Result"
+        ));
+        
+        compilationErrorArea = new JTextArea();
+        compilationErrorArea.setEditable(false);
+        compilationErrorArea.setFont(JBUI.Fonts.create("Monospaced", 12));
+        compilationErrorArea.setBackground(new JBColor(new Color(255, 245, 245), new Color(45, 45, 48)));
+        compilationErrorArea.setForeground(new JBColor(JBColor.RED, new Color(255, 100, 100)));
+        compilationErrorArea.setRows(5);
+        compilationErrorArea.setText("No compilation result yet. Click 'Pre-compile' to check.");
+        
+        JBScrollPane errorScrollPane = new JBScrollPane(compilationErrorArea);
+        errorScrollPane.setPreferredSize(new Dimension(800, 100));
+        
+        errorPanel.add(errorScrollPane, BorderLayout.CENTER);
+        
+        return errorPanel;
+    }
+    
+    public void setCompilationResult(boolean success, String errorMessage) {
+        if (success) {
+            compilationErrorArea.setForeground(new JBColor(new Color(0, 128, 0), new Color(100, 200, 100)));
+            compilationErrorArea.setText("✓ Compilation successful! No errors found.");
+            lastCompilationError = "";
+        } else {
+            compilationErrorArea.setForeground(new JBColor(JBColor.RED, new Color(255, 100, 100)));
+            compilationErrorArea.setText(errorMessage != null ? errorMessage : "Compilation failed.");
+            lastCompilationError = errorMessage != null ? errorMessage : "";
+        }
+    }
+    
+    public String getLastCompilationError() {
+        return lastCompilationError;
+    }
+    
+    public boolean hasCompilationError() {
+        return lastCompilationError != null && !lastCompilationError.isEmpty();
     }
     
     private JLabel createTabLabel(String text, boolean selected) {

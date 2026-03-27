@@ -203,6 +203,47 @@ public class ApiService {
     }
     
     /**
+     * 预编译测试代码，调用后端API
+     * @param requestBody 请求体（包含package_name, class_name, empty_method, test_code）
+     * @return API响应结果
+     * @throws Exception 异常
+     */
+    public static String preCompile(String requestBody) throws Exception {
+        URL url = new URL(Constants.PRE_COMPILE_URL);
+        
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setDoOutput(true);
+        
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = requestBody.getBytes("UTF-8");
+            os.write(input, 0, input.length);
+        }
+        
+        int responseCode = connection.getResponseCode();
+        
+        StringBuilder response = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
+            String responseLine = null;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+        }
+        
+        connection.disconnect();
+        
+        if (responseCode >= 300) {
+            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
+        }
+        
+        return response.toString();
+    }
+    
+    /**
      * 构建请求体
      * @param content 文本内容
      * @return 请求体字符串

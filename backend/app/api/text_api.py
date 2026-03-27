@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from app.schemas.text_schema import (TextRequest, StructuredRequest, FixCompilationErrorRequest, InitSessionRequest)  # noqa: E501
+from app.schemas.text_schema import (TextRequest, StructuredRequest, FixCompilationErrorRequest, InitSessionRequest, PreCompileRequest)  # noqa: E501
 from app.services.text_service import TextService
 from app.dependencies import get_text_service
 from app.utils.response import success_response, fail_response
+from app.utils.compilation_util import CompilationUtil
 import logging
 import time
 
@@ -123,6 +124,53 @@ async def fix_compilation_error(
     except Exception as e:
         elapsed = (time.time() - start_time) * 1000
         logger.error(f"<<< 修复失败 [{elapsed:.0f}ms]: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content=fail_response(msg=str(e)).model_dump()
+        )
+
+
+@router.post("/pre-compile", summary="预编译测试代码，返回编译结果")
+async def pre_compile(
+    request: PreCompileRequest
+):
+    start_time = time.time()
+    try:
+        logger.info(">>> 接收预编译请求")
+        
+        if not CompilationUtil.check_javac_available():
+            elapsed = (time.time() - start_time) * 1000
+            logger.error(f"<<< 预编译失败 [{elapsed:.0f}ms]: javac不可用")
+            return JSONResponse(
+                status_code=500,
+                content=fail_response(msg="javac not available on server").model_dump()
+            )
+        
+        result = CompilationUtil.compile_test_code(
+            package_name=request.package_name,
+            class_name=request.class_name,
+            empty_method=request.empty_method,
+            test_code=request.test_code
+        )
+        
+        elapsed = (time.time() - start_time) * 1000
+        
+        if result["success"]:
+            logger.info(f"<<< 预编译成功 [{elapsed:.0f}ms]")
+            return success_response(data={
+                "success": True,
+                "error_message": ""
+            })
+        else:
+            logger.info(f"<<< 预编译失败 [{elapsed:.0f}ms]: 编译错误")
+            return success_response(data={
+                "success": False,
+                "error_message": result["error_message"]
+            })
+            
+    except Exception as e:
+        elapsed = (time.time() - start_time) * 1000
+        logger.error(f"<<< 预编译失败 [{elapsed:.0f}ms]: {str(e)}")
         return JSONResponse(
             status_code=500,
             content=fail_response(msg=str(e)).model_dump()

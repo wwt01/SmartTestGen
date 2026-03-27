@@ -26,6 +26,11 @@ public class Constants {
     public static final String FIX_COMPILATION_ERROR_URL = "http://localhost:8000/api/text/fix-compilation-error";
     
     /**
+     * 预编译 API请求URL
+     */
+    public static final String PRE_COMPILE_URL = "http://localhost:8000/api/text/pre-compile";
+    
+    /**
      * 请求体字段名
      */
     public static final String REQUEST_BODY_FIELD = "content";

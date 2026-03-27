@@ -37,7 +37,6 @@ public class StructuredResultPanel extends JPanel {
         void onPrecompileCode();
         void onFixCompilationError();
         void onInsertEmptyMethod();
-        void onInsertCodeToFile();
         void onCreateTestFile();
     }
     
@@ -87,12 +86,6 @@ public class StructuredResultPanel extends JPanel {
         buttonPanel.setInsertEmptyMethodListener(e -> {
             if (listener != null) {
                 listener.onInsertEmptyMethod();
-            }
-        });
-        
-        buttonPanel.setInsertToFileListener(e -> {
-            if (listener != null) {
-                listener.onInsertCodeToFile();
             }
         });
         

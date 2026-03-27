@@ -44,3 +44,10 @@ class FixCompilationErrorRequest(BaseModel):
     code: str = Field(..., description="测试代码")
     error_message: str = Field(..., description="编译错误信息")
     session_id: str = Field(..., description="会话标识，用于获取静态上下文")
+
+
+class PreCompileRequest(BaseModel):
+    package_name: str = Field(..., description="包名")
+    class_name: str = Field(..., description="类名")
+    empty_method: str = Field(..., description="空方法代码")
+    test_code: str = Field(..., description="测试代码")

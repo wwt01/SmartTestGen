@@ -21,8 +21,6 @@ public class ButtonPanel extends JPanel {
     private final JButton fixCompilationButton;
     /** 插入空方法按钮 */
     private final JButton insertEmptyMethodButton;
-    /** 插入到文件按钮 */
-    private final JButton insertToFileButton;
     /** 创建测试文件按钮 */
     private final JButton createTestFileButton;
     
@@ -52,9 +50,6 @@ public class ButtonPanel extends JPanel {
         
         insertEmptyMethodButton = new JButton("Insert Empty Method");
         secondRowPanel.add(insertEmptyMethodButton);
-        
-        insertToFileButton = new JButton("Insert to File");
-        secondRowPanel.add(insertToFileButton);
         
         createTestFileButton = new JButton("Create Test File");
         secondRowPanel.add(createTestFileButton);
@@ -124,17 +119,6 @@ public class ButtonPanel extends JPanel {
     }
     
     /**
-     * 设置插入到文件按钮的监听器
-     * @param listener 监听器
-     */
-    public void setInsertToFileListener(ActionListener listener) {
-        for (ActionListener al : insertToFileButton.getActionListeners()) {
-            insertToFileButton.removeActionListener(al);
-        }
-        insertToFileButton.addActionListener(listener);
-    }
-    
-    /**
      * 设置创建测试文件按钮的监听器
      * @param listener 监听器
      */
@@ -156,7 +140,6 @@ public class ButtonPanel extends JPanel {
         precompileButton.setEnabled(enabled);
         fixCompilationButton.setEnabled(enabled);
         insertEmptyMethodButton.setEnabled(enabled);
-        insertToFileButton.setEnabled(enabled);
         createTestFileButton.setEnabled(enabled);
     }
     
@@ -169,7 +152,6 @@ public class ButtonPanel extends JPanel {
         precompileButton.setEnabled(enabled);
         fixCompilationButton.setEnabled(enabled);
         insertEmptyMethodButton.setEnabled(enabled);
-        insertToFileButton.setEnabled(enabled);
         createTestFileButton.setEnabled(enabled);
     }
     

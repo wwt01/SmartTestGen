@@ -318,11 +318,6 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
     }
     
     @Override
-    public void onInsertCodeToFile() {
-        insertCodeToFile();
-    }
-    
-    @Override
     public void onCreateTestFile() {
         createTestFile();
     }
@@ -435,25 +430,6 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
     }
     
     /**
-     * 将代码插入到文件
-     */
-    private void insertCodeToFile() {
-        if (codeEditorPanel == null) {
-            Messages.showErrorDialog("Code editor not initialized", "Error");
-            return;
-        }
-        
-        String testCode = codeEditorPanel.getTestCode();
-        if (testCode == null || testCode.isEmpty() || testCode.equals("Click 'Generate Test Code' button to generate test code")) {
-            Messages.showWarningDialog("No test code to insert. Please generate test code first.", "Warning");
-            return;
-        }
-        
-        // 使用 InsertionManager 插入测试代码
-        InsertionManager.insertCodeToFile(testCode, this);
-    }
-    
-    /**
      * 创建测试文件
      */
     private void createTestFile() {
@@ -478,73 +454,131 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
     private void precompileCode() {
         System.out.println("[Test Case Generator] Pre-compile button clicked");
         
-        // 获取编辑器中的代码
         if (codeEditorPanel == null) {
             System.out.println("[Test Case Generator] Code editor not initialized");
             Messages.showErrorDialog("Code editor not initialized", "Error");
             return;
         }
         
-        String code = codeEditorPanel.getTestCode();
+        String testCode = codeEditorPanel.getTestCode();
+        String emptyMethod = codeEditorPanel.getEmptyMethodCode();
         
-        System.out.println("[Test Case Generator] Code to compile length: " + (code != null ? code.length() : 0));
+        System.out.println("[Test Case Generator] Test code length: " + (testCode != null ? testCode.length() : 0));
+        System.out.println("[Test Case Generator] Empty method length: " + (emptyMethod != null ? emptyMethod.length() : 0));
         
-        // 检查代码是否为空
-        if (code == null || code.isEmpty()) {
-            System.out.println("[Test Case Generator] No code to compile");
-            Messages.showInfoMessage("No code to compile", "Information");
+        if (testCode == null || testCode.isEmpty()) {
+            System.out.println("[Test Case Generator] No test code to compile");
+            Messages.showInfoMessage("No test code to compile", "Information");
             return;
         }
         
-        // 检查是否是默认提示文本
-        if (code.equals("Click 'Generate Test Code' button to generate test code")) {
+        if (testCode.contains("Click 'Generate Test Code' button") || 
+            testCode.equals("// Click 'Generate Test Code' button to generate test code")) {
             System.out.println("[Test Case Generator] Default text found, no code to compile");
             Messages.showInfoMessage("Please generate test code first before pre-compiling.", "Information");
             return;
         }
         
-        // 显示加载中提示
-        Window parentWindow = SwingUtilities.getWindowAncestor(this);
-        System.out.println("[Test Case Generator] Parent window: " + (parentWindow != null ? parentWindow.getClass().getName() : "null"));
+        String packageName = extractPackageName(testCode);
+        String className = extractClassName(testCode);
         
-        JDialog loadingDialog = createLoadingDialog(parentWindow, "Checking code compilation...");
+        if (packageName == null || packageName.isEmpty()) {
+            packageName = "com.example";
+        }
+        if (className == null || className.isEmpty()) {
+            className = "TestClass";
+        }
+        
+        final String finalPackageName = packageName;
+        final String finalClassName = className;
+        
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        JDialog loadingDialog = createLoadingDialog(parentWindow, "Pre-compiling test code...");
         loadingDialog.setVisible(true);
         
-        System.out.println("[Test Case Generator] Loading dialog shown");
-        
-        // 异步检查代码编译
-        ThreadPoolService.getInstance().computeInBackground(
-            () -> {
-                System.out.println("[Test Case Generator] Starting code compilation check");
-                return checkCodeCompilation(code);
-            },
-            compilationErrors -> {
-                System.out.println("[Test Case Generator] Compilation check completed with " + compilationErrors.size() + " errors");
-                loadingDialog.dispose();
+        ThreadPoolService.getInstance().runInBackground(() -> {
+            try {
+                String requestBody = buildPreCompileRequest(finalPackageName, finalClassName, emptyMethod, testCode);
+                System.out.println("[Test Case Generator] Pre-compile request: " + requestBody.substring(0, Math.min(200, requestBody.length())));
+                
+                String response = com.smarttestgen.ideaplugin.service.api.ApiService.preCompile(requestBody);
+                System.out.println("[Test Case Generator] Pre-compile response: " + response);
+                
+                com.google.gson.JsonObject responseJson = com.google.gson.JsonParser.parseString(response).getAsJsonObject();
+                com.google.gson.JsonObject data = responseJson.getAsJsonObject("data");
+                
+                boolean success = data.get("success").getAsBoolean();
+                String errorMessage = data.has("error_message") && !data.get("error_message").isJsonNull() 
+                    ? data.get("error_message").getAsString() : "";
                 
                 ApplicationManager.getApplication().invokeLater(() -> {
-                    if (!compilationErrors.isEmpty()) {
-                        StringBuilder errorMessage = new StringBuilder("Compilation errors found:\n\n");
-                        for (String error : compilationErrors) {
-                            errorMessage.append("- ").append(error).append("\n");
-                        }
-                        errorMessage.append("\nPlease review and fix the errors in the code.");
-                        
-                        Messages.showErrorDialog(errorMessage.toString(), "Compilation Errors");
+                    loadingDialog.dispose();
+                    codeEditorPanel.setCompilationResult(success, errorMessage);
+                    
+                    if (success) {
+                        System.out.println("[Test Case Generator] Pre-compile successful");
                     } else {
-                        Messages.showInfoMessage("No compilation errors found!\n\nThe code appears to be syntactically correct.", "Success");
+                        System.out.println("[Test Case Generator] Pre-compile failed: " + errorMessage);
                     }
                 }, ModalityState.nonModal());
-            },
-            e -> {
-                System.out.println("[Test Case Generator] Error in precompileCode: " + e.getMessage());
+                
+            } catch (Exception e) {
+                System.out.println("[Test Case Generator] Pre-compile error: " + e.getMessage());
                 e.printStackTrace();
-                loadingDialog.dispose();
-                ApplicationManager.getApplication().invokeLater(() -> 
-                    Messages.showErrorDialog("Error checking code: " + e.getMessage(), "Error"),
-                    ModalityState.nonModal());
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    loadingDialog.dispose();
+                    codeEditorPanel.setCompilationResult(false, "Error: " + e.getMessage());
+                }, ModalityState.nonModal());
             }
-        );
+        });
+    }
+    
+    private String extractPackageName(String code) {
+        if (code == null) return null;
+        for (String line : code.split("\n")) {
+            line = line.trim();
+            if (line.startsWith("package ")) {
+                return line.substring(8).replace(";", "").trim();
+            }
+        }
+        return null;
+    }
+    
+    private String extractClassName(String code) {
+        if (code == null) return null;
+        for (String line : code.split("\n")) {
+            line = line.trim();
+            if (line.contains("class ") && line.endsWith("{")) {
+                int classIndex = line.indexOf("class ");
+                String afterClass = line.substring(classIndex + 6).trim();
+                int spaceIndex = afterClass.indexOf(" ");
+                int braceIndex = afterClass.indexOf("{");
+                int endIndex = Math.min(
+                    spaceIndex >= 0 ? spaceIndex : Integer.MAX_VALUE,
+                    braceIndex >= 0 ? braceIndex : Integer.MAX_VALUE
+                );
+                if (endIndex == Integer.MAX_VALUE) {
+                    return afterClass.replace("Test", "");
+                }
+                String className = afterClass.substring(0, endIndex).trim();
+                if (className.endsWith("Test")) {
+                    className = className.substring(0, className.length() - 4);
+                }
+                return className;
+            }
+        }
+        return null;
+    }
+    
+    private String buildPreCompileRequest(String packageName, String className, String emptyMethod, String testCode) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"package_name\":\"").append(escapeContent(packageName)).append("\",");
+        sb.append("\"class_name\":\"").append(escapeContent(className)).append("\",");
+        sb.append("\"empty_method\":\"").append(escapeContent(emptyMethod != null ? emptyMethod : "")).append("\",");
+        sb.append("\"test_code\":\"").append(escapeContent(testCode)).append("\"");
+        sb.append("}");
+        return sb.toString();
     }
     
     /**
@@ -570,94 +604,6 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         loadingDialog.add(panel);
         
         return loadingDialog;
-    }
-    
-    /**
-     * 检查代码编译正确性
-     * @param code 要检查的代码
-     * @return 编译错误列表
-     */
-    private java.util.List<String> checkCodeCompilation(String code) {
-        System.out.println("[Test Case Generator] Starting checkCodeCompilation");
-        java.util.List<String> errors = new ArrayList<>();
-        
-        try {
-            // 获取当前项目
-            com.intellij.openapi.project.Project[] projects = com.intellij.openapi.project.ProjectManager.getInstance().getOpenProjects();
-            com.intellij.openapi.project.Project project = projects.length > 0 ? projects[0] : null;
-            
-            if (project == null) {
-                System.out.println("[Test Case Generator] No open project found");
-                errors.add("No open project found");
-                return errors;
-            }
-            
-            System.out.println("[Test Case Generator] Project found: " + project.getName());
-            
-            // 检查代码是否为空
-            if (code == null || code.isEmpty()) {
-                System.out.println("[Test Case Generator] Code is empty");
-                errors.add("Generated code is empty");
-                return errors;
-            }
-            
-            System.out.println("[Test Case Generator] Code length: " + code.length());
-            
-            // 使用 PSI 进行快速语法检查
-            System.out.println("[Test Case Generator] Starting PSI syntax check");
-            try {
-                // 使用 PsiFileFactory 创建临时文件并解析
-                com.intellij.psi.PsiFileFactory psiFileFactory = com.intellij.psi.PsiFileFactory.getInstance(project);
-                com.intellij.psi.PsiFile psiFile = psiFileFactory.createFileFromText(
-                    "TempTest.java",
-                    com.intellij.openapi.fileTypes.StdFileTypes.JAVA,
-                    code
-                );
-                
-                // 递归检查所有 PSI 元素中的错误
-                int psiErrorCount = checkPsiErrors(psiFile, errors);
-                
-                System.out.println("[Test Case Generator] PSI check completed with " + psiErrorCount + " errors");
-                
-            } catch (Exception e) {
-                System.out.println("[Test Case Generator] Error in PSI check: " + e.getMessage());
-                e.printStackTrace();
-                errors.add("Error checking syntax: " + e.getMessage());
-            }
-            
-        } catch (Exception e) {
-            System.out.println("[Test Case Generator] Error in checkCodeCompilation: " + e.getMessage());
-            e.printStackTrace();
-            errors.add("Error checking code: " + e.getMessage());
-        }
-        
-        return errors;
-    }
-    
-    /**
-     * 递归检查 PSI 元素及其子元素中的错误
-     * @param element PSI 元素
-     * @param errors 错误列表
-     * @return 错误数量
-     */
-    private int checkPsiErrors(com.intellij.psi.PsiElement element, java.util.List<String> errors) {
-        int errorCount = 0;
-        
-        // 检查当前元素是否为错误元素
-        if (element instanceof com.intellij.psi.PsiErrorElement) {
-            com.intellij.psi.PsiErrorElement errorElement = (com.intellij.psi.PsiErrorElement) element;
-            String errorDescription = errorElement.getErrorDescription();
-            System.out.println("[Test Case Generator] PSI Error: " + errorDescription);
-            errors.add("Syntax error: " + errorDescription);
-            errorCount++;
-        }
-        
-        // 递归检查所有子元素
-        for (com.intellij.psi.PsiElement child : element.getChildren()) {
-            errorCount += checkPsiErrors(child, errors);
-        }
-        
-        return errorCount;
     }
     
     /**
@@ -692,22 +638,12 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
             return;
         }
         
-        String consoleOutput = getConsoleOutput();
+        String errorMessage = codeEditorPanel.getLastCompilationError();
         
-        if (consoleOutput == null || consoleOutput.isEmpty()) {
-            System.out.println("[Test Case Generator] No console output found");
+        if (errorMessage == null || errorMessage.isEmpty()) {
+            System.out.println("[Test Case Generator] No compilation error found");
             ApplicationManager.getApplication().invokeLater(() -> 
-                Messages.showWarningDialog("No console output found. Please run the project first.", "Warning"),
-                ModalityState.nonModal());
-            return;
-        }
-        
-        boolean hasError = consoleOutput.contains("error:") || consoleOutput.contains("Exception in thread") || consoleOutput.contains("Compilation failed");
-        
-        if (!hasError) {
-            System.out.println("[Test Case Generator] No compilation errors found in console output");
-            ApplicationManager.getApplication().invokeLater(() -> 
-                Messages.showInfoMessage("No compilation errors found in console output.", "Information"),
+                Messages.showWarningDialog("No compilation error found. Please run 'Pre-compile' first to check for errors.", "Warning"),
                 ModalityState.nonModal());
             return;
         }
@@ -718,7 +654,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         
         String existingSessionId = TestCodeService.getCurrentSessionId();
         if (existingSessionId != null) {
-            executeFixCompilationError(existingSessionId, code, consoleOutput, loadingDialog);
+            executeFixCompilationError(existingSessionId, code, errorMessage, loadingDialog);
         } else {
             waitForSessionInitAsync(2, sessionId -> {
                 if (sessionId == null) {
@@ -728,7 +664,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
                         ModalityState.nonModal());
                     return;
                 }
-                executeFixCompilationError(sessionId, code, consoleOutput, loadingDialog);
+                executeFixCompilationError(sessionId, code, errorMessage, loadingDialog);
             });
         }
     }
@@ -778,22 +714,6 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
                     ModalityState.nonModal());
             }
         );
-    }
-    
-    /**
-     * 获取控制台输出信息
-     * @return 控制台输出信息
-     */
-    private String getConsoleOutput() {
-        try {
-            // 暂时返回模拟数据，实际获取控制台输出需要更复杂的实现
-            // 这里使用模拟数据来测试功能
-            return "error: cannot find symbol\n  symbol:   class Calculator\n  location: class CalculatorTest\nerror: cannot find symbol\n  symbol:   method add(int,int)\n  location: class Calculator\nerror: cannot find symbol\n  symbol:   method assertEquals(int,int)\n  location: class CalculatorTest";
-        } catch (Exception e) {
-            System.out.println("[Test Case Generator] Error getting console output: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
     }
     
     /**
