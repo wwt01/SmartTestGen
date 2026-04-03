@@ -48,14 +48,40 @@ SmartTestGen/
 git clone https://github.com/wwt01/SmartTestGen.git
 cd SmartTestGen
 ```
+### 2. 后端核心模块部署（Python）
+#### 前提条件
+确保本地已安装 Python 3.8+，建议使用虚拟环境隔离依赖。
 
-### 2. 后端核心模块构建
-进入 backend 目录，使用 Maven 打包（确保本地已安装 Maven 3.6+、JDK 11+）：
+#### 步骤1：进入后端目录并创建虚拟环境
 ```bash
+# 进入backend目录
 cd backend
-mvn clean package -DskipTests
+
+# 创建虚拟环境（可选，推荐）
+python -m venv venv
+
+# 激活虚拟环境
+# Windows系统
+venv\Scripts\activate
+# Mac/Linux系统
+source venv/bin/activate
 ```
-构建完成后，生成的可执行 JAR 包位于 `backend/target/` 目录下，可独立运行测试生成服务。
+
+#### 步骤2：安装依赖
+后端依赖已整理在 requirements.txt 文件中，执行以下命令安装：
+```bash
+pip install -r requirements.txt
+```
+
+#### 步骤3：使用uvicorn运行后端服务
+```bash
+# 基础运行命令（默认端口8000）
+uvicorn main:app --host 0.0.0.0 --port 8000
+
+# 开发模式（自动重载，便于调试）
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+运行成功后，后端服务将在 http://localhost:8000 启动，供IDEA插件调用。
 
 ### 3. IDEA 插件安装与使用
 #### 方式 1：本地编译安装
