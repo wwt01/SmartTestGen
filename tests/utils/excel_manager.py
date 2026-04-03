@@ -5,14 +5,14 @@ Excel操作工具类
 
 import os
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from openpyxl.styles import Font, Alignment, PatternFill
+from typing import Dict, List, Any
+# from datetime import datetime
 
 
 class ExcelManager:
     """Excel文件管理器"""
-    
+
     HEADERS = [
         "id",
         "requirement",
@@ -25,6 +25,7 @@ class ExcelManager:
         "class_type",
         "fields",
         "dependencies",
+        "original_code",
         "structured_result",
         "parse_time_ms",
         "session_id",
@@ -45,26 +46,26 @@ class ExcelManager:
         "final_success",
         "total_fix_count"
     ]
-    
+
     def __init__(self, file_path: str):
         self.file_path = file_path
         self.workbook = None
         self.sheet = None
-        
+
     def create(self):
         """创建新的Excel文件"""
         self.workbook = Workbook()
         self.sheet = self.workbook.active
         self.sheet.title = "Test Results"
-        
+
         for col, header in enumerate(self.HEADERS, 1):
             cell = self.sheet.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
             cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
             cell.alignment = Alignment(horizontal="center", vertical="center")
-        
+
         self.workbook.save(self.file_path)
-        
+
     def load(self):
         """加载现有Excel文件"""
         if not os.path.exists(self.file_path):
@@ -72,11 +73,11 @@ class ExcelManager:
         else:
             self.workbook = load_workbook(self.file_path)
             self.sheet = self.workbook.active
-            
+
     def get_row_count(self) -> int:
         """获取数据行数"""
         return self.sheet.max_row - 1
-        
+
     def get_row(self, row_index: int) -> Dict[str, Any]:
         """获取指定行的数据"""
         row_data = {}
@@ -84,37 +85,37 @@ class ExcelManager:
             cell_value = self.sheet.cell(row=row_index + 1, column=col).value
             row_data[header] = cell_value
         return row_data
-        
+
     def add_row(self, data: Dict[str, Any]):
         """添加新行"""
         row_index = self.sheet.max_row + 1
         for col, header in enumerate(self.HEADERS, 1):
             value = data.get(header, "")
             self.sheet.cell(row=row_index, column=col, value=value)
-            
+
     def update_cell(self, row_index: int, column_name: str, value: Any):
         """更新指定单元格"""
         if column_name in self.HEADERS:
             col = self.HEADERS.index(column_name) + 1
             self.sheet.cell(row=row_index + 1, column=col, value=value)
-            
+
     def update_row(self, row_index: int, data: Dict[str, Any]):
         """更新整行数据"""
         for col, header in enumerate(self.HEADERS, 1):
             if header in data:
                 self.sheet.cell(row=row_index + 1, column=col, value=data[header])
-                
+
     def save(self):
         """保存Excel文件"""
         self.workbook.save(self.file_path)
-        
+
     def get_all_rows(self) -> List[Dict[str, Any]]:
         """获取所有行数据"""
         rows = []
         for i in range(1, self.sheet.max_row):
             rows.append(self.get_row(i))
         return rows
-        
+
     def get_rows_by_condition(self, column_name: str, value: Any) -> List[Dict[str, Any]]:
         """根据条件获取行"""
         rows = []
@@ -124,7 +125,7 @@ class ExcelManager:
                 row_data["_row_index"] = i
                 rows.append(row_data)
         return rows
-        
+
     def set_column_width(self):
         """设置列宽"""
         column_widths = {
@@ -139,6 +140,7 @@ class ExcelManager:
             "class_type": 15,
             "fields": 30,
             "dependencies": 30,
+            "original_code": 60,
             "structured_result": 40,
             "parse_time_ms": 15,
             "session_id": 40,
@@ -159,7 +161,7 @@ class ExcelManager:
             "final_success": 15,
             "total_fix_count": 18
         }
-        
+
         for col, header in enumerate(self.HEADERS, 1):
             width = column_widths.get(header, 15)
             self.sheet.column_dimensions[self.sheet.cell(row=1, column=col).column_letter].width = width

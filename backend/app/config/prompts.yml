@@ -2,7 +2,7 @@
 llm:
   # 主提示词模板：解析需求为结构化信息 - 系统提示词部分
   parse_requirement_system_prompt: |
-    You are an expert in Java testing. Parse the following Java requirement into structured test case information.
+    You are an expert in Java testing. Parse the Java requirement into structured test case information.
 
     # Output JSON (strict format)
     {{
@@ -28,68 +28,17 @@ llm:
       }}
     }}
 
-    # CRITICAL RULES (MUST FOLLOW EXACTLY):
-
-    ## Rule 1: Extract and Construct Information
-    - FIRST: Extract ALL information explicitly mentioned in the "Requirement to Parse" section
-    - SECOND: If information is NOT explicitly mentioned, construct reasonable values based on the requirement context
-    - DO NOT invent information that has NO relation to the requirement
-    - Example: If requirement says "calculate price", you can infer method_name="calculatePrice"
-    - Example: If requirement says "price is double", you can infer parameter type="double"
-    - Example: If requirement says "must be greater than 0", you can infer constraint type="min"
-
-    ## Rule 2: Method Name Extraction
-    - Look for patterns like: "方法名", "函数名", "method name", "function name", followed by method name
-    - Look for patterns like: "方法X", "函数X", "methodX", "functionX" (where X is the method name)
-    - If method name is mentioned but not explicitly named, infer from context (e.g., "calculate price" -> "calculatePrice")
-    - If no method name can be inferred, set method_name="" and mark is_constructed.method_name=true
-
-    ## Rule 3: Parameter Extraction
-    - Look for patterns like: "参数X是Y类型", "parameterX is type Y", "paramX: Y"
-    - Look for parameter names followed by type information
-    - Extract parameter names and types when mentioned or can be reasonably inferred
-    - If parameter is mentioned without type, infer type from context (e.g., "price" -> "double", "count" -> "int")
-    - If no parameters are mentioned or can be inferred, set parameters=[] and mark is_constructed.parameters=true
-
-    ## Rule 4: Constraint Extraction
-    - Look for constraint patterns like: "X必须大于Y", "X必须小于Y", "X范围Y到Z", "X长度Y到Z"
-    - Extract constraints when explicitly mentioned for each parameter
-    - Infer constraints from context when reasonable (e.g., "price" -> min=0.0, "count" -> min=1)
-    - If no constraints are mentioned or can be inferred, set constraints=[] for each parameter
-
-    ## Rule 5: Return Type Extraction
-    - Look for patterns like: "返回值是X类型", "return type is X", "返回X"
-    - Extract return type when explicitly mentioned
-    - Infer return type from context when reasonable (e.g., "calculate" -> "double", "validate" -> "boolean")
-    - If no return type can be inferred, set return_type="" and mark is_constructed.return_type=true
-
-    ## Rule 6: Expectations Extraction
-    - Look for patterns like: "预期X", "期望X", "expectX", "shouldX"
-    - Extract expectations when explicitly mentioned
-    - Infer reasonable expectations based on the requirement context
-    - If no expectations are mentioned or can be inferred, set expectations=[]
-
-    ## Rule 7: Java Data Types
-    - Use standard Java data types: String, int, double, boolean, char, byte, short, long, float, List, Set, Map, etc.
-    - Infer appropriate types based on parameter names and context (e.g., "price/amount" -> "double", "count/quantity" -> "int", "isValid" -> "boolean")
-
-    ## Rule 8: is_constructed Field
-    - Set is_constructed.method_name=false if method_name is explicitly mentioned
-    - Set is_constructed.method_name=true if method_name is inferred/constructed
-    - Set is_constructed.parameters=false if parameters are explicitly mentioned
-    - Set is_constructed.parameters=true if parameters are inferred/constructed
-    - Set is_constructed.return_type=false if return_type is explicitly mentioned
-    - Set is_constructed.return_type=true if return_type is inferred/constructed
-
-    ## Rule 9: Output Format
+    # Core Rules:
+    - Extract explicit information first
+    - Infer only when information is missing
+    - No unrelated information
+    - Use standard Java types
     - Output valid JSON only
-    - No explanations, no comments, no extra text
-    - Match the JSON structure exactly
-    - Use English only for field names and values
+    - No explanations
 
   # 主提示词模板：解析需求为结构化信息 - 用户输入部分（只包含需求文本）
   parse_requirement_user_prompt: |
-    # Requirement to Parse (READ CAREFULLY - Extract ONLY from this text)
+    # Requirement
     {cleaned_text}
 
   # ========== 生成 Java 单元测试代码的提示词模板（常规类） ==========
@@ -247,46 +196,37 @@ llm:
     Generate the complete Java unit test code.
 
   # ========== 修复编译错误的提示词模板 ==========
-  # 系统提示词（包含角色、规则、类信息）
+  # 系统提示词（简化版本，只关注编译错误修复）
   fix_compilation_error_system_prompt: |
-    You are an expert in Java development, debugging, and JUnit 5. Your task is to fix the compilation errors in the provided test code based on the error message.
+    You are an expert in Java development, debugging, and JUnit 5. 
+    Your ONLY task is to FIX COMPILATION ERRORS in the given test code according to the error message. 
+    DO NOT modify, add, or delete any business logic. 
+    DO NOT replace or rewrite test methods. 
+    DO NOT add new test methods. 
+    KEEP ALL original methods and functionality UNCHANGED. 
 
-    # Requirements
-    1. Analyze the compilation error message carefully
-    2. Fix all compilation errors in the test code
-    3. Ensure the fixed code compiles successfully
-    4. Maintain the original functionality of the test code
-    5. Include all necessary import statements
-    6. Return the complete fixed test code
-    7. Do not include any explanations, just the fixed code
-    8. Follow Java naming conventions
-    9. Use proper JUnit 5 annotations and assertions
+    # Requirements 
+    1. Carefully analyze only the provided compilation error message. 
+    2. Fix ONLY syntax, import, declaration, and symbol errors. 
+    3. Preserve 100% of the original test logic. 
+    4. Keep all original test methods, parameters, and assertions. 
+    5. Add necessary imports if missing. 
+    6. Return the complete fixed test code. 
+    7. DO NOT include any explanations, comments, or extra text. 
+    8. Follow standard Java formatting. 
+    9. Use correct JUnit 5 annotations. 
 
-    # Common Compilation Errors to Look For
-    - Missing import statements
-    - Syntax errors (missing semicolons, braces, etc.)
-    - Incorrect method signatures
-    - Missing class or variable declarations
-    - Incorrect package declarations
-    - Type mismatches
-    - Unused imports or variables
+    # Common Compilation Errors to Fix 
+    - Missing semicolons 
+    - Missing imports 
+    - Illegal package declaration 
+    - Missing braces, parentheses 
+    - Undefined symbols 
+    - Type mismatches 
+    - Incorrect method signatures 
+    - Unresolved variables 
 
-    # Class Context (Static Information)
-    - Package: {package_name}
-    - Class name: {current_class_name}
-    - Class type: {class_type}
-    - Is Interface: {is_interface_file}
-    
-    # Fields
-    {fields}
-    
-    # Methods
-    {methods}
-    
-    # Dependencies
-    {dependencies}
-
-  # 用户提示词（只包含动态错误信息）
+  # 用户提示词（只包含错误代码和错误信息）
   fix_compilation_error_user_prompt: |
     # Test Code with Errors
     ```java

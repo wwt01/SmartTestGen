@@ -2,7 +2,9 @@ import json
 import logging
 import yaml
 import os
-from typing import Dict, Any, List
+import hashlib
+from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import BaseMessage
@@ -36,6 +38,7 @@ class InMemoryHistory(BaseChatMessageHistory, BaseModel):
 
 
 class LLMService:
+
     """LLM调用服务 - 使用LangChain框架"""
 
     def __init__(self):
@@ -44,6 +47,8 @@ class LLMService:
         self.prompts = self._load_prompts()
 
         self.store: Dict[str, InMemoryHistory] = {}
+        self.cache: Dict[str, Dict] = {}  # 缓存字典
+        self.cache_ttl = 3600  # 缓存过期时间（秒）
 
         logger.info("Using DeepSeek LLM")
         logger.info(f"LLM URL: {settings.LLM_API_URL}")
@@ -53,8 +58,8 @@ class LLMService:
             api_key=settings.DASHSCOPE_API_KEY,
             base_url=settings.LLM_API_URL,
             model=settings.LLM_MODEL,
-            temperature=0.3,
-            max_tokens=2000,
+            temperature=0.1,  # 降低温度，减少随机性
+            max_tokens=1500,  # 减少最大token数
             top_p=0.9,
             timeout=settings.LLM_TIMEOUT
         )
@@ -192,7 +197,41 @@ class LLMService:
                 }
             }
 
-    def _prepare_few_shot_examples(self, preprocessing_result: Dict[str, Any], limit: int = 6) -> List[Dict[str, str]]:
+    def _generate_cache_key(self, text: str) -> str:
+        """生成缓存键"""
+        return hashlib.md5(text.encode()).hexdigest()
+
+    def _is_cache_valid(self, cache_entry: Dict) -> bool:
+        """检查缓存是否有效"""
+        timestamp = cache_entry.get('timestamp')
+        if not timestamp:
+            return False
+        return (datetime.now() - timestamp).total_seconds() < self.cache_ttl
+
+    def _get_cache(self, key: str) -> Optional[Dict]:
+        """获取缓存"""
+        cache_entry = self.cache.get(key)
+        if cache_entry and self._is_cache_valid(cache_entry):
+            return cache_entry.get('data')
+        return None
+
+    def _set_cache(self, key: str, data: Dict):
+        """设置缓存"""
+        self.cache[key] = {
+            'data': data,
+            'timestamp': datetime.now()
+        }
+
+    def _cleanup_cache(self):
+        """清理过期缓存"""
+        expired_keys = []
+        for key, entry in self.cache.items():
+            if not self._is_cache_valid(entry):
+                expired_keys.append(key)
+        for key in expired_keys:
+            del self.cache[key]
+
+    def _prepare_few_shot_examples(self, preprocessing_result: Dict[str, Any], limit: int = 3) -> List[Dict[str, str]]:
         """准备Few-Shot示例，格式为[{input: natural_language, output: structured_result}]"""
         # 直接使用预处理结果中的语言字段
         language = preprocessing_result.get("language", "english")
@@ -209,21 +248,61 @@ class LLMService:
             natural_lang = example.get("natural_language", "")
             structured = example.get("structured_result", {})
 
+            # 简化示例，只保留核心信息
+            simplified_structured = {
+                "method_name": structured.get("method_name", ""),
+                "parameters": structured.get("parameters", []),
+                "return_type": structured.get("return_type", ""),
+                "expectations": structured.get("expectations", [])[:2]  # 只保留前2个期望
+            }
+
             # 将structured_result转换为JSON字符串
-            output_str = json.dumps(structured, ensure_ascii=False, indent=2)
+            output_str = json.dumps(simplified_structured, ensure_ascii=False, indent=0)
+
+            # 简化输入文本，只保留核心需求
+            simplified_input = natural_lang[:100] + ("..." if len(natural_lang) > 100 else "")
 
             few_shot_examples.append({
-                "input": natural_lang,
+                "input": simplified_input,
                 "output": output_str
             })
 
         return few_shot_examples
+
+    def print_prompt(self, full_prompt):
+        """打印提示词（结构化、自动换行、清晰美观）"""
+        print("\n" + "=" * 50 + " 完整提示词开始 " + "=" * 50)
+
+        # 如果是 LangChain 的消息列表，格式化输出
+        if hasattr(full_prompt, 'messages'):
+            for i, msg in enumerate(full_prompt.messages):
+                role = msg.__class__.__name__.replace("Message", "").upper()
+                content = msg.content.strip()
+                print(f"\n【{role}】")
+                print("-" * 80)
+                print(content)
+        else:
+            # 普通字符串直接输出
+            print(str(full_prompt))
+
+        print("=" * 50 + " 完整提示词结束 " + "=" * 50 + "\n")
+        return full_prompt
 
     def get_structured_result(self, preprocessing_result: Dict[str, Any]) -> Dict[str, Any]:
         """获取结构化解析结果 - 使用LangChain和FewShotChatMessagePromptTemplate"""
         logger.info("=" * 60)
         logger.info("开始解析需求文本")
         logger.info("=" * 60)
+
+        # 生成缓存键
+        cleaned_text = preprocessing_result["cleaned_text"]
+        cache_key = self._generate_cache_key(cleaned_text)
+
+        # 检查缓存
+        cached_result = self._get_cache(cache_key)
+        if cached_result:
+            logger.info("使用缓存的解析结果")
+            return cached_result
 
         system_prompt_template = self.prompts.get("llm", {}).get("parse_requirement_system_prompt", "")
         user_prompt_template = self.prompts.get("llm", {}).get("parse_requirement_user_prompt", "")
@@ -234,7 +313,7 @@ class LLMService:
         if not user_prompt_template:
             user_prompt_template = "# Requirement\n{cleaned_text}\n\n# Output JSON\n{{\n  \"method_name\": \"string\",\n  \"parameters\": [],\n  \"return_type\": \"string\",\n  \"expectations\": []\n}}"
 
-        few_shot_examples = self._prepare_few_shot_examples(preprocessing_result, limit=6)
+        few_shot_examples = self._prepare_few_shot_examples(preprocessing_result, limit=3)
         logger.info(f"加载 {len(few_shot_examples)} 个示例")
 
         example_prompt = ChatPromptTemplate.from_messages([
@@ -253,11 +332,9 @@ class LLMService:
             ("human", user_prompt_template)
         ])
 
-        cleaned_text = preprocessing_result["cleaned_text"]
-
         try:
             logger.info("调用 LLM 解析需求...")
-            chain = final_prompt | self.llm
+            chain = final_prompt | self.print_prompt | self.llm
             response = chain.invoke({"cleaned_text": cleaned_text})
 
             content = response.content
@@ -273,6 +350,9 @@ class LLMService:
             content = content.strip()
 
             structured_data = json.loads(content)
+
+            # 存入缓存
+            self._set_cache(cache_key, structured_data)
 
             logger.info("=" * 60)
             logger.info("需求解析成功")
@@ -326,10 +406,33 @@ class LLMService:
         methods = static_context.get("methods", [])
         dependencies = static_context.get("dependencies", [])
 
+        # 优化上下文数据，只传递与当前测试方法相关的信息
+        relevant_methods = self.filter_relevant_methods(methods, method_name, class_name)
+        relevant_fields = [f for f in fields if f.get('visibility', 'public') in ['public', 'protected']]
+        relevant_dependencies = self.filter_relevant_dependencies(dependencies, relevant_methods, relevant_fields)
+
+        # 简化字段和方法的表示，只保留必要的信息
+        simplified_fields = []
+        for field in relevant_fields:
+            simplified_fields.append({
+                'name': field.get('name', ''),
+                'type': field.get('type', ''),
+                'visibility': field.get('visibility', 'public')
+            })
+
+        simplified_methods = []
+        for method in relevant_methods:
+            simplified_methods.append({
+                'name': method.get('name', ''),
+                'parameters': method.get('parameters', []),
+                'return_type': method.get('return_type', ''),
+                'visibility': method.get('visibility', 'public')
+            })
+
         logger.info(f"目标方法: {method_name}")
         logger.info(f"参数数量: {len(parameters)} | 返回类型: {return_type}")
         logger.info(f"类名: {class_name} | 类型: {class_type} | 接口: {is_interface}")
-        logger.info(f"上下文数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
+        logger.info(f"上下文数据: 字段数: {len(simplified_fields)} | 方法数: {len(simplified_methods)} | 依赖数: {len(relevant_dependencies)}")
 
         if is_interface:
             system_template = self.prompts.get("llm", {}).get("generate_test_system_prompt_interface", "")
@@ -352,9 +455,9 @@ Generate the complete Java unit test code."""
 
         formatted_parameters = json.dumps(parameters, ensure_ascii=False, indent=2)
         formatted_expectations = json.dumps(expectations, ensure_ascii=False, indent=2)
-        formatted_fields = json.dumps(fields, ensure_ascii=False, indent=2)
-        formatted_methods = json.dumps(methods, ensure_ascii=False, indent=2)
-        formatted_dependencies = "\n".join([f"- {dep}" for dep in dependencies]) if dependencies else "No dependencies"
+        formatted_fields = json.dumps(simplified_fields, ensure_ascii=False, indent=2)
+        formatted_methods = json.dumps(simplified_methods, ensure_ascii=False, indent=2)
+        formatted_dependencies = "\n".join([f"- {dep}" for dep in relevant_dependencies]) if relevant_dependencies else "No dependencies"
 
         variables = {
             "class_name": class_name,
@@ -380,12 +483,12 @@ Generate the complete Java unit test code."""
                     ("human", user_template)
                 ])
 
-                chain = prompt_with_history | self.llm
+                chain = prompt_with_history | self.print_prompt | self.llm
 
                 with_message_history = RunnableWithMessageHistory(
                     chain,
                     self.get_session_history,
-                    input_messages_key="input",
+                    input_messages_key=None,
                     history_messages_key="history",
                 )
 
@@ -516,7 +619,7 @@ Generate the complete Java unit test code."""
             return "throw new UnsupportedOperationException(\"Method not implemented yet\");"
 
     def fix_compilation_error(self, error_data: Dict[str, Any]) -> str:
-        """修复编译错误 - 使用LangChain"""
+        """修复编译错误 - 使用LangChain，简化版本，只传入错误代码和错误信息"""
         logger.info("Starting fix_compilation_error")
 
         session_id = error_data.get("session_id")
@@ -524,38 +627,18 @@ Generate the complete Java unit test code."""
             logger.error("session_id is required for fix_compilation_error")
             raise ValueError("session_id is required")
 
-        static_context = self.get_static_context(session_id)
-        if not static_context:
-            logger.error(f"No static context found for session_id: {session_id}")
-            raise ValueError(f"Session not found: {session_id}, please call init-session first")
-
         code = error_data.get("code", "")
         error_message = error_data.get("error_message", "")
 
-        current_class_name = static_context.get("class_name", "")
-        is_interface_file = static_context.get("is_interface", False)
-        package_name = static_context.get("package_name", "")
-        class_type = static_context.get("class_type", "Unknown")
-        fields = static_context.get("fields", [])
-        methods = static_context.get("methods", [])
-        dependencies = static_context.get("dependencies", [])
-
-        logger.info(f"Fixing compilation error for class: {current_class_name}")
+        logger.info(f"Fixing compilation error")
         logger.info(f"Error message: {error_message}")
-        logger.info(f"Package: {package_name}, Class type: {class_type}")
-        logger.info(f"Is interface file: {is_interface_file}")
         logger.info(f"Code length: {len(code)}")
-        logger.info(f"上下文数据: 字段数: {len(fields)} | 方法数: {len(methods)} | 依赖数: {len(dependencies)}")
-
-        formatted_fields = json.dumps(fields, ensure_ascii=False, indent=2)
-        formatted_methods = json.dumps(methods, ensure_ascii=False, indent=2)
-        formatted_dependencies = "\n".join([f"- {dep}" for dep in dependencies]) if dependencies else "No dependencies"
 
         system_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_system_prompt", "")
         user_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_user_prompt", "")
 
         if not system_prompt:
-            system_prompt = "You are an expert in Java development, debugging, and JUnit 5. Your task is to fix the compilation errors in the provided test code based on the error message."
+            system_prompt = "You are an expert in Java development, debugging, and JUnit 5. Your ONLY task is to FIX COMPILATION ERRORS in the given test code according to the error message. DO NOT modify, add, or delete any business logic. DO NOT replace or rewrite test methods. DO NOT add new test methods. KEEP ALL original methods and functionality UNCHANGED."
         if not user_prompt:
             user_prompt = "# Test Code with Errors\n```java\n{code}\n```\n\n# Compilation Error Message\n{error_message}\n\nGenerate the complete fixed test code with all compilation errors resolved."
 
@@ -564,14 +647,7 @@ Generate the complete Java unit test code."""
 
             variables = {
                 "code": code,
-                "error_message": error_message,
-                "current_class_name": current_class_name,
-                "is_interface_file": is_interface_file,
-                "package_name": package_name,
-                "class_type": class_type,
-                "fields": formatted_fields,
-                "methods": formatted_methods,
-                "dependencies": formatted_dependencies
+                "error_message": error_message
             }
 
             if session_id:
@@ -583,12 +659,12 @@ Generate the complete Java unit test code."""
                     ("human", user_prompt)
                 ])
 
-                chain = prompt_template_obj | self.llm
+                chain = prompt_template_obj | self.print_prompt | self.llm
 
                 with_message_history = RunnableWithMessageHistory(
                     chain,
                     self.get_session_history,
-                    input_messages_key="input",
+                    input_messages_key=None,
                     history_messages_key="history",
                 )
 

@@ -1,8 +1,10 @@
 package com.smarttestgen.ideaplugin.service.api;
 
 import com.smarttestgen.ideaplugin.util.Constants;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -20,38 +22,25 @@ public class ApiService {
      * @throws Exception 异常
      */
     public static String initSession(String requestBody) throws Exception {
-        URL url = new URL(Constants.INIT_SESSION_URL);
-        
+        HttpURLConnection connection = getHttpURLConnection(Constants.INIT_SESSION_URL, requestBody);
+        return executeRequest(connection);
+    }
+
+    private static @NotNull HttpURLConnection getHttpURLConnection(String urlString, String requestBody) throws IOException {
+        URL url = new URL(urlString);
+
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
+
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         connection.setRequestProperty("Accept", "application/json");
         connection.setDoOutput(true);
-        
+
         try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.getBytes("UTF-8");
+            byte[] input = requestBody.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
-        
-        int responseCode = connection.getResponseCode();
-        
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-        }
-        
-        connection.disconnect();
-        
-        if (responseCode >= 300) {
-            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
-        }
-        
-        return response.toString();
+        return connection;
     }
 
     /**
@@ -61,43 +50,10 @@ public class ApiService {
      * @throws Exception 异常
      */
     public static String processText(String content) throws Exception {
-        // 创建 URL对象
-        URL url = new URL(Constants.API_URL);
-        
-        // 创建 HttpURLConnection对象
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
-        // 设置请求方法
-        connection.setRequestMethod("POST");
-        
-        // 设置请求头
-        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        
         // 构建请求体
         String requestBody = buildRequestBody(content);
-        
-        // 发送请求体
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
-        
-        // 读取响应
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-        }
-        
-        // 关闭连接
-        connection.disconnect();
-        
-        return response.toString();
+        HttpURLConnection connection = getHttpURLConnection(Constants.API_URL, requestBody);
+        return executeRequest(connection);
     }
     
     /**
@@ -107,48 +63,8 @@ public class ApiService {
      * @throws Exception 异常
      */
     public static String generateTestCode(String requestBody) throws Exception {
-        // 创建URL对象
-        URL url = new URL(Constants.GENERATE_TEST_URL);
-        
-        // 创建HttpURLConnection对象
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
-        // 设置请求方法
-        connection.setRequestMethod("POST");
-        
-        // 设置请求头
-        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        
-        // 发送请求体
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.getBytes("UTF-8");
-            os.write(input, 0, input.length);
-        }
-        
-        // 获取响应码
-        int responseCode = connection.getResponseCode();
-        
-        // 读取响应
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-        }
-        
-        // 关闭连接
-        connection.disconnect();
-        
-        // 如果响应码不是200，抛出异常
-        if (responseCode >= 300) {
-            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
-        }
-        
-        return response.toString();
+        HttpURLConnection connection = getHttpURLConnection(Constants.GENERATE_TEST_URL, requestBody);
+        return executeRequest(connection);
     }
     
     /**
@@ -158,48 +74,8 @@ public class ApiService {
      * @throws Exception 异常
      */
     public static String fixCompilationError(String requestBody) throws Exception {
-        // 创建URL对象
-        URL url = new URL(Constants.FIX_COMPILATION_ERROR_URL);
-        
-        // 创建HttpURLConnection对象
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
-        // 设置请求方法
-        connection.setRequestMethod("POST");
-        
-        // 设置请求头
-        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        
-        // 发送请求体
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.getBytes("UTF-8");
-            os.write(input, 0, input.length);
-        }
-        
-        // 获取响应码
-        int responseCode = connection.getResponseCode();
-        
-        // 读取响应
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-        }
-        
-        // 关闭连接
-        connection.disconnect();
-        
-        // 如果响应码不是200，抛出异常
-        if (responseCode >= 300) {
-            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
-        }
-        
-        return response.toString();
+        HttpURLConnection connection = getHttpURLConnection(Constants.FIX_COMPILATION_ERROR_URL, requestBody);
+        return executeRequest(connection);
     }
     
     /**
@@ -209,37 +85,53 @@ public class ApiService {
      * @throws Exception 异常
      */
     public static String preCompile(String requestBody) throws Exception {
-        URL url = new URL(Constants.PRE_COMPILE_URL);
-        
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.getBytes("UTF-8");
-            os.write(input, 0, input.length);
-        }
-        
+        HttpURLConnection connection = getHttpURLConnection(Constants.PRE_COMPILE_URL, requestBody);
+        return executeRequest(connection);
+    }
+    
+    /**
+     * 执行HTTP请求并处理响应
+     * @param connection HTTP连接
+     * @return 响应结果
+     * @throws Exception 异常
+     */
+    private static String executeRequest(HttpURLConnection connection) throws Exception {
         int responseCode = connection.getResponseCode();
         
+        // 读取响应
+        String response = readResponse(connection, responseCode);
+        
+        // 关闭连接
+        connection.disconnect();
+        
+        // 检查响应码
+        if (responseCode >= 300) {
+            throw new Exception("API request failed with code " + responseCode + ": " + response);
+        }
+        
+        return response;
+    }
+    
+    /**
+     * 读取HTTP响应
+     * @param connection HTTP连接
+     * @param responseCode 响应码
+     * @return 响应内容
+     * @throws IOException 异常
+     */
+    private static String readResponse(HttpURLConnection connection, int responseCode) throws IOException {
         StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), "UTF-8"))) {
+                new InputStreamReader(
+                        responseCode >= 200 && responseCode < 300 ? connection.getInputStream() : connection.getErrorStream(), 
+                        StandardCharsets.UTF_8
+                )
+        )) {
             String responseLine = null;
             while ((responseLine = br.readLine()) != null) {
                 response.append(responseLine.trim());
             }
         }
-        
-        connection.disconnect();
-        
-        if (responseCode >= 300) {
-            throw new Exception("API request failed with code " + responseCode + ": " + response.toString());
-        }
-        
         return response.toString();
     }
     

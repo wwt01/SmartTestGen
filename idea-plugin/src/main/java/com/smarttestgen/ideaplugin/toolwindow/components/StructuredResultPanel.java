@@ -194,6 +194,13 @@ public class StructuredResultPanel extends JPanel {
                     typeField.setEditable(false);
                     paramRowPanel.add(typeField);
                     
+                    // 参数限制标签
+                    paramRowPanel.add(Box.createHorizontalStrut(10));
+                    paramRowPanel.add(new JLabel("Constraints:"));
+                    JTextField constraintsField = new JTextField(param.constraints, 30);
+                    constraintsField.setEditable(false);
+                    paramRowPanel.add(constraintsField);
+                    
                     paramsPanel.add(paramRowPanel);
                     
                     // 保存文本框引用到成员变量
@@ -259,13 +266,27 @@ public class StructuredResultPanel extends JPanel {
     public String buildParametersJson() {
         StringBuilder parametersBuilder = new StringBuilder("[");
         if (!parameterNameFields.isEmpty()) {
+            // 重新解析参数信息，获取完整的参数数据（包括限制）
+            List<JsonUtils.ParameterInfo> parameters = JsonUtils.extractParameters(rawResult, Constants.RESPONSE_PARAMETERS_FIELD);
+            
             for (int i = 0; i < parameterNameFields.size(); i++) {
                 if (i > 0) {
                     parametersBuilder.append(",");
                 }
                 String name = parameterNameFields.get(i).getText();
                 String type = parameterTypeFields.get(i).getText();
-                parametersBuilder.append("{\"name\":\"").append(escapeContent(name)).append("\",\"type\":\"").append(escapeContent(type)).append("\",\"constraints\":[]}");
+                
+                // 获取参数的限制信息
+                String constraints = "[]";
+                if (i < parameters.size()) {
+                    String constraintsStr = parameters.get(i).constraints;
+                    if (!constraintsStr.isEmpty()) {
+                        constraints = "[" + constraintsStr + "]";
+                    }
+                }
+                
+                parametersBuilder.append("{\"name\":\"").append(escapeContent(name)).append("\",\"type\":\"").append(escapeContent(type)).append("\",\"constraints\":")
+                        .append(constraints).append("}");
             }
         }
         parametersBuilder.append("]");

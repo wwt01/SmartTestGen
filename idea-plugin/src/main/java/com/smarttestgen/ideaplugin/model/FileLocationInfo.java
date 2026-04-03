@@ -1,6 +1,7 @@
 package com.smarttestgen.ideaplugin.model;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * 文件位置信息模型类
@@ -25,7 +26,7 @@ public class FileLocationInfo {
         this.lineNumber = -1;
         this.isInterface = false;
         this.className = "";
-        this.implementationFiles = new java.util.ArrayList<>();
+        this.implementationFiles = new ArrayList<>();
     }
 
     public String getFilePath() {

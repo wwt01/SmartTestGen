@@ -1,5 +1,6 @@
 package com.smarttestgen.ideaplugin.service.code;
 
+import com.intellij.openapi.project.ProjectUtil;
 import com.smarttestgen.ideaplugin.model.ClassContextInfo;
 import com.smarttestgen.ideaplugin.model.CodeStructureInfo;
 import com.smarttestgen.ideaplugin.model.FieldInfo;
@@ -23,6 +24,7 @@ import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
 import com.smarttestgen.ideaplugin.service.file.FileFinderService;
 import com.smarttestgen.ideaplugin.util.LogUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -74,7 +76,7 @@ public class CodeStructureService {
             
             ApplicationManager.getApplication().runReadAction(() -> {
                 try {
-                    VirtualFile projectRoot = project.getBaseDir();
+                    VirtualFile projectRoot = ProjectUtil.guessProjectDir(project);
                     
                     List<VirtualFile> javaFiles = new ArrayList<>();
                     FileFinderService.findJavaFiles(projectRoot, javaFiles);
@@ -87,29 +89,8 @@ public class CodeStructureService {
                         if (psiFile != null) {
                             for (PsiElement element : psiFile.getChildren()) {
                                 if (element instanceof PsiClass) {
-                                    PsiClass psiClass = (PsiClass) element;
-                                    CodeStructureInfo.ClassInfo classInfo = new CodeStructureInfo.ClassInfo();
-                                    classInfo.setName(psiClass.getQualifiedName());
-                                    
-                                    PsiMethod[] methods = psiClass.getMethods();
-                                    for (PsiMethod method : methods) {
-                                        CodeStructureInfo.MethodInfo methodInfo = new CodeStructureInfo.MethodInfo();
-                                        methodInfo.setName(method.getName());
-                                        methodInfo.setReturnType(method.getReturnType() != null ? 
-                                            method.getReturnType().getPresentableText() : "void");
-                                        
-                                        PsiParameter[] parameters = method.getParameterList().getParameters();
-                                        for (PsiParameter parameter : parameters) {
-                                            CodeStructureInfo.ParameterInfo paramInfo = new CodeStructureInfo.ParameterInfo(
-                                                parameter.getName(),
-                                                parameter.getType().getPresentableText()
-                                            );
-                                            methodInfo.addParameter(paramInfo);
-                                        }
-                                        
-                                        classInfo.addMethod(methodInfo);
-                                    }
-                                    
+                                    CodeStructureInfo.ClassInfo classInfo = getClassInfo((PsiClass) element);
+
                                     structureInfo.addClass(classInfo);
                                     classCount++;
                                 }
@@ -130,7 +111,32 @@ public class CodeStructureService {
         
         return structureInfo;
     }
-    
+
+    private static CodeStructureInfo.@NotNull ClassInfo getClassInfo(PsiClass psiClass) {
+        CodeStructureInfo.ClassInfo classInfo = new CodeStructureInfo.ClassInfo();
+        classInfo.setName(psiClass.getQualifiedName());
+
+        PsiMethod[] methods = psiClass.getMethods();
+        for (PsiMethod method : methods) {
+            CodeStructureInfo.MethodInfo methodInfo = new CodeStructureInfo.MethodInfo();
+            methodInfo.setName(method.getName());
+            methodInfo.setReturnType(method.getReturnType() != null ?
+                method.getReturnType().getPresentableText() : "void");
+
+            PsiParameter[] parameters = method.getParameterList().getParameters();
+            for (PsiParameter parameter : parameters) {
+                CodeStructureInfo.ParameterInfo paramInfo = new CodeStructureInfo.ParameterInfo(
+                    parameter.getName(),
+                    parameter.getType().getPresentableText()
+                );
+                methodInfo.addParameter(paramInfo);
+            }
+
+            classInfo.addMethod(methodInfo);
+        }
+        return classInfo;
+    }
+
     /**
      * 将代码结构信息转换为字符串
      * @param structureInfo 代码结构信息
@@ -177,7 +183,7 @@ public class CodeStructureService {
                     
                     PsiFile psiFile = PsiManager.getInstance(project).findFile(virtualFile);
                     if (psiFile == null) {
-                        LogUtil.warn("ClassInfo", "未找到PSI文件");
+                        LogUtil.warn("ClassInfo", "未找到 PSI 文件");
                         return;
                     }
                     
@@ -212,8 +218,8 @@ public class CodeStructureService {
     }
 
     /**
-     * 从PsiClass提取类信息
-     * @param psiClass PSI类对象
+     * 从 PsiClass提取类信息
+     * @param psiClass PSI 类对象
      * @return 类上下文信息
      */
     private static ClassContextInfo extractClassInfo(PsiClass psiClass) {
@@ -279,8 +285,7 @@ public class CodeStructureService {
      * @param dependencies 依赖集合
      */
     private static void extractDependencyFromType(PsiType type, Set<String> dependencies) {
-        if (type instanceof PsiClassType) {
-            PsiClassType classType = (PsiClassType) type;
+        if (type instanceof PsiClassType classType) {
             PsiClass resolvedClass = classType.resolve();
             if (resolvedClass != null && resolvedClass.getQualifiedName() != null) {
                 dependencies.add(resolvedClass.getQualifiedName());

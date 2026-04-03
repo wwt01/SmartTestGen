@@ -1,8 +1,9 @@
 """
 步骤1: 准备测试数据
-从手动构建和methods2test数据集创建测试数据
+从GitHub爬取的测试数据或手动构建的测试数据创建测试数据
 """
 
+from utils.excel_manager import ExcelManager
 import os
 import sys
 import json
@@ -10,7 +11,38 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.excel_manager import ExcelManager
+
+def load_crawled_test_data():
+    """加载从GitHub爬取的测试数据"""
+    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    crawled_data_path = os.path.join(results_dir, "test_cases_with_requirements.json")
+
+    if os.path.exists(crawled_data_path):
+        try:
+            with open(crawled_data_path, 'r', encoding='utf-8') as f:
+                crawled_data = json.load(f)
+            print(f"Loaded {len(crawled_data)} crawled test cases")
+            return crawled_data
+        except Exception as e:
+            print(f"Error loading crawled test data: {e}")
+
+    # 尝试加载其他可能的数据源
+    alternative_paths = [
+        os.path.join(results_dir, "selected_test_cases.json"),
+        os.path.join(results_dir, "crawled_test_data.json")
+    ]
+
+    for path in alternative_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    crawled_data = json.load(f)
+                print(f"Loaded {len(crawled_data)} test cases from {os.path.basename(path)}")
+                return crawled_data
+            except Exception as e:
+                print(f"Error loading test data from {path}: {e}")
+
+    return []
 
 
 MANUAL_TEST_CASES = [
@@ -283,42 +315,71 @@ def create_test_data():
     print("Step 1: Preparing Test Data")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
-    
+
     results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
     os.makedirs(results_dir, exist_ok=True)
-    
+
     excel_path = os.path.join(results_dir, "test_results.xlsx")
-    
+
     excel = ExcelManager(excel_path)
     excel.create()
     excel.load()
-    
-    print(f"\nAdding {len(MANUAL_TEST_CASES)} test cases...")
-    
-    for case in MANUAL_TEST_CASES:
-        excel.add_row(case)
-    
+
+    # 尝试加载爬取的测试数据
+    crawled_test_cases = load_crawled_test_data()
+
+    if crawled_test_cases:
+        print(f"\nAdding {len(crawled_test_cases)} crawled test cases...")
+
+        for case in crawled_test_cases:
+            # 确保所有必要字段都存在
+            required_fields = ["id", "requirement", "class_name", "method_name", "parameters", "return_type"]
+            for field in required_fields:
+                if field not in case:
+                    case[field] = ""
+
+            # 添加其他必要字段
+            case.setdefault("package_name", "")
+            case.setdefault("is_interface", False)
+            case.setdefault("class_type", "Service")
+            case.setdefault("fields", "[]")
+            case.setdefault("dependencies", "[]")
+
+            excel.add_row(case)
+    else:
+        print(f"\nAdding {len(MANUAL_TEST_CASES)} manual test cases...")
+
+        for case in MANUAL_TEST_CASES:
+            excel.add_row(case)
+
     excel.set_column_width()
     excel.save()
-    
-    print(f"\n✅ Test data saved to: {excel_path}")
-    print(f"   Total test cases: {len(MANUAL_TEST_CASES)}")
-    
+
+    total_cases = len(crawled_test_cases) if crawled_test_cases else len(MANUAL_TEST_CASES)
+
+    print(f"\nTest data saved to: {excel_path}")
+    print(f"   Total test cases: {total_cases}")
+
     print("\n" + "=" * 60)
     print("Test Data Summary")
     print("=" * 60)
-    
+
+    test_cases = crawled_test_cases if crawled_test_cases else MANUAL_TEST_CASES
+
     print(f"\n{'ID':<4} {'Requirement':<40} {'Class':<20} {'Method':<15}")
     print("-" * 80)
-    
-    for case in MANUAL_TEST_CASES:
+
+    for case in test_cases[:10]:  # 只显示前10个
         req_short = case['requirement'][:37] + "..." if len(case['requirement']) > 40 else case['requirement']
         print(f"{case['id']:<4} {req_short:<40} {case['class_name']:<20} {case['method_name']:<15}")
-    
+
+    if len(test_cases) > 10:
+        print(f"... and {len(test_cases) - 10} more cases")
+
     print("\n" + "=" * 60)
-    print("✅ Step 1 completed successfully!")
+    print("Step 1 completed successfully!")
     print("=" * 60)
-    
+
     return excel_path
 
 

@@ -66,12 +66,19 @@ public class TestGeneratorToolWindowAction extends AnAction {
         
         // 异步调用后端接口
         CompletableFuture.runAsync(() -> {
+            long startTime = System.currentTimeMillis();
+            System.out.println("[Test Case Generator] Starting async processing at " + new java.util.Date(startTime));
+            
             try {
-                System.out.println("[Test Case Generator] Starting async processing");
+                System.out.println("[Test Case Generator] Processing selected text: " + selectedText.substring(0, Math.min(100, selectedText.length())) + (selectedText.length() > 100 ? "..." : ""));
                 
                 // 调用 需求文本结构化信息提取API服务处理文本
+                System.out.println("[Test Case Generator] Calling API service for text processing");
+                long apiStartTime = System.currentTimeMillis();
                 String responseBody = ApiService.processText(selectedText);
-                System.out.println("[Test Case Generator] Response received: " + responseBody);
+                long apiEndTime = System.currentTimeMillis();
+                System.out.println("[Test Case Generator] API response received in " + (apiEndTime - apiStartTime) + "ms");
+                System.out.println("[Test Case Generator] Response length: " + responseBody.length() + " characters");
 
                 // 在EDT线程中更新UI
                 SwingUtilities.invokeLater(() -> {
@@ -87,7 +94,7 @@ public class TestGeneratorToolWindowAction extends AnAction {
                     if (toolWindow == null) {
                         System.out.println("[Test Case Generator] Creating ToolWindow dynamically");
                         toolWindow = toolWindowManager.registerToolWindow("TestGeneratorToolWindow", true, ToolWindowAnchor.RIGHT, project);
-                        
+
                         // 创建面板
                         TestGeneratorToolWindowPanel panel = new TestGeneratorToolWindowPanel(project);
                         
@@ -126,10 +133,13 @@ public class TestGeneratorToolWindowAction extends AnAction {
                     
                     // 显示 ToolWindow
                     toolWindow.show();
+                    long endTime = System.currentTimeMillis();
                     System.out.println("[Test Case Generator] ToolWindow shown successfully with data");
+                    System.out.println("[Test Case Generator] Total processing time: " + (endTime - startTime) + "ms");
                 });
             } catch (Exception ex) {
-                System.out.println("[Test Case Generator] Exception occurred: " + ex.getMessage());
+                long endTime = System.currentTimeMillis();
+                System.out.println("[Test Case Generator] Exception occurred after " + (endTime - startTime) + "ms: " + ex.getMessage());
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
                     loadingDialog.dispose();
