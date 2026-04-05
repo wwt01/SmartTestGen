@@ -158,7 +158,10 @@ def main():
     
     # 验证测试用例
     valid_cases, invalid_cases = analyzer.validate_test_cases()
-    
+
+    # ✅ 只保留有效用例
+    analyzer.test_data = valid_cases
+
     # 选择测试用例
     selected_cases = analyzer.select_test_cases(max_cases=20)
     

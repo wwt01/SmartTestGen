@@ -10,18 +10,12 @@ import sys
 import json
 from datetime import datetime
 from typing import List, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
 
 # 添加utils模块路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-
-try:
-    from langchain_openai import ChatOpenAI
-    from langchain_core.messages import HumanMessage
-    LANGCHAIN_AVAILABLE = True
-except ImportError:
-    LANGCHAIN_AVAILABLE = False
-    logger.warning("langchain not installed. Install with: pip install langchain langchain-openai")
 
 
 class LLMRequirementGenerator:
@@ -33,90 +27,123 @@ class LLMRequirementGenerator:
         """
         # 获取LLM配置
         llm_config = config.get_llm_config()
-        self.api_key = llm_config.get("api_key", "")
-        self.base_url = llm_config.get("base_url", "https://api.deepseek.com/v1")
-        self.model_name = llm_config.get("model_name", "deepseek-chat")
-        self.temperature = llm_config.get("temperature", 0.7)
-        self.max_tokens = llm_config.get("max_tokens", 1000)
-        self.llm = None
+        # self.api_key = llm_config.get("api_key", "sk-b1f7e3a3f60648638582f54c7e36de45")
+        # self.base_url = llm_config.get("base_url", "https://api.deepseek.com")
+        # self.model_name = llm_config.get("model_name", "deepseek-chat")
+        # self.temperature = llm_config.get("temperature", 0.7)
+        # self.max_tokens = llm_config.get("max_tokens", 1000)
+        self.api_key = "sk-b1f7e3a3f60648638582f54c7e36de45"
+        self.base_url = "https://api.deepseek.com"
+        self.model_name = "deepseek-chat"
+        self.temperature =0.7
+        self.max_tokens = 1000
+        try:
+            self.llm = ChatOpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url,
+                model=self.model_name,
+                temperature=self.temperature
+            )
+            logger.info("✅ LLM initialized successfully")
+        except Exception as e:
+            logger.error(f"Warning: Failed to initialize LLM: {e}")
 
-        if LANGCHAIN_AVAILABLE and self.api_key:
-            try:
-                self.llm = ChatOpenAI(
-                    openai_api_key=self.api_key,
-                    openai_api_base=self.base_url,
-                    model_name=self.model_name,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens
-                )
-                logger.info("✅ LLM initialized successfully")
-            except Exception as e:
-                logger.error(f"Warning: Failed to initialize LLM: {e}")
-        elif not self.api_key:
-            logger.warning("Warning: No API key provided. LLM will not be available.")
 
-    def generate_requirement(self, class_info, method_info):
+#     def generate_requirement(self, class_info, method_info):
+#         """
+#         使用LLM生成需求描述
+
+#         Args:
+#             class_info: 类信息字典，包含class_name和original_code
+#             method_info: 方法信息字典，包含name、parameters、return_type
+
+#         Returns:
+#             需求描述字符串
+#         """
+#         class_name = class_info['class_name']
+#         method_name = method_info['name']
+#         parameters = method_info['parameters']
+#         return_type = method_info['return_type']
+#         original_code = class_info.get('original_code', '')
+
+#         # 如果没有LLM，使用简单的规则生成需求描述
+#         if not self.llm:
+#             return self._generate_simple_requirement(method_name, parameters, return_type)
+
+#         # 构建提示词
+#         prompt = f"""你是一个专业的Java测试工程师。请根据以下Java方法信息，生成详细的测试需求描述。
+
+# 类名：{class_name}
+# 方法名：{method_name}
+# 参数列表：{parameters}
+# 返回类型：{return_type}
+
+# 方法源代码：
+# ```
+# {original_code[:2000]}
+# ```
+
+# 请生成一个详细的测试需求描述，要求如下：
+
+# 1. **方法功能描述**：简要说明该方法的功能和作用
+# 2. **参数说明**：列出所有参数及其类型
+# 3. **内部逻辑**：根据方法名和代码，推测方法的内部实现逻辑
+# 4. **返回值说明**：说明返回值的类型和含义
+# 5. **测试场景**：列出需要测试的场景（正常情况、边界情况、异常情况等）
+
+# 要求：
+# - 描述要详细且准确
+# - 覆盖主要的测试场景
+# - 语言简洁明了，使用中文
+# - 只返回需求描述，不包含其他任何内容
+# - 不要包含代码示例
+
+# 请直接输出需求描述，不要有任何前言或后缀。"""
+
+#         try:
+#             # 调用LLM生成需求描述
+#             response = self.llm.invoke([HumanMessage(content=prompt)])
+#             requirement = response.content.strip()
+
+#             return requirement
+#         except Exception as e:
+#             logger.error(f"Error generating requirement with LLM: {e}")
+#             # 如果LLM调用失败，使用简单的规则生成
+#             return self._generate_simple_requirement(method_name, parameters, return_type)
+
+    def generate_requirement(self, original_code: str) -> str:
         """
-        使用LLM生成需求描述
-
-        Args:
-            class_info: 类信息字典，包含class_name和original_code
-            method_info: 方法信息字典，包含name、parameters、return_type
-
-        Returns:
-            需求描述字符串
+        只需要传入 Java 源代码，自动生成测试需求描述
+        兼容原有代码逻辑
         """
-        class_name = class_info['class_name']
-        method_name = method_info['name']
-        parameters = method_info['parameters']
-        return_type = method_info['return_type']
-        original_code = class_info.get('original_code', '')
-
-        # 如果没有LLM，使用简单的规则生成需求描述
+        # 如果没有LLM，返回简单提示
         if not self.llm:
-            return self._generate_simple_requirement(method_name, parameters, return_type)
+            return "无法调用大模型，请配置API密钥"
 
-        # 构建提示词
-        prompt = f"""你是一个专业的Java测试工程师。请根据以下Java方法信息，生成详细的测试需求描述。
+        # 极简提示词：只看代码 → 生成标准测试需求
+        prompt = f"""你是专业Java测试工程师。
+    根据下面的Java代码，生成一段标准测试需求描述，必须包含：
+    1. 方法功能
+    2. 输入参数说明
+    3. 返回值说明
+    4. 测试场景（正常场景、边界场景、异常场景）
 
-类名：{class_name}
-方法名：{method_name}
-参数列表：{parameters}
-返回类型：{return_type}
+    要求：
+    - 纯中文，专业简洁
+    - 只输出需求描述，不要多余内容
+    - 不要代码，不要格式符号
 
-方法源代码：
-```
-{original_code[:2000]}
-```
-
-请生成一个详细的测试需求描述，要求如下：
-
-1. **方法功能描述**：简要说明该方法的功能和作用
-2. **参数说明**：列出所有参数及其类型
-3. **内部逻辑**：根据方法名和代码，推测方法的内部实现逻辑
-4. **返回值说明**：说明返回值的类型和含义
-5. **测试场景**：列出需要测试的场景（正常情况、边界情况、异常情况等）
-
-要求：
-- 描述要详细且准确
-- 覆盖主要的测试场景
-- 语言简洁明了，使用中文
-- 只返回需求描述，不包含其他任何内容
-- 不要包含代码示例
-
-请直接输出需求描述，不要有任何前言或后缀。"""
+    Java代码：
+    {original_code}
+    """
 
         try:
-            # 调用LLM生成需求描述
-            response = self.llm.invoke([HumanMessage(content=prompt)])
-            requirement = response.content.strip()
-
-            return requirement
+            response = self.llm.invoke(prompt)
+            return response.content.strip()
         except Exception as e:
-            logger.error(f"Error generating requirement with LLM: {e}")
-            # 如果LLM调用失败，使用简单的规则生成
-            return self._generate_simple_requirement(method_name, parameters, return_type)
-
+            logger.error(f"LLM调用失败: {e}")
+            return "LLM调用失败，无法生成需求"
+        
     def _generate_simple_requirement(self, method_name: str, parameters: str, return_type: str) -> str:
         """
         使用简单规则生成需求描述（当LLM不可用时）
@@ -198,7 +225,7 @@ class LLMRequirementGenerator:
             }
 
             # 生成需求描述
-            requirement = self.generate_requirement(class_info, method_info)
+            requirement = self.generate_requirement(case["original_code"])
 
             # 更新测试用例
             updated_case = case.copy()
