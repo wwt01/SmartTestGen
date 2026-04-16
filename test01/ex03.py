@@ -3,7 +3,7 @@ import json
 from langchain_openai import ChatOpenAI
 
 # ===================== 你的配置 =====================
-API_KEY = "sk-afe08b93d34246628907cfcd9fab7401"  # 填写 DeepSeek API Key
+API_KEY = ""  # 填写 DeepSeek API Key
 BASE_URL = "https://api.deepseek.com"
 MODEL = "deepseek-chat"
 # ====================================================
