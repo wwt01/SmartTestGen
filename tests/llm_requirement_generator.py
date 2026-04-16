@@ -27,12 +27,8 @@ class LLMRequirementGenerator:
         """
         # 获取LLM配置
         llm_config = config.get_llm_config()
-        # self.api_key = llm_config.get("api_key", "sk-b1f7e3a3f60648638582f54c7e36de45")
-        # self.base_url = llm_config.get("base_url", "https://api.deepseek.com")
-        # self.model_name = llm_config.get("model_name", "deepseek-chat")
-        # self.temperature = llm_config.get("temperature", 0.7)
-        # self.max_tokens = llm_config.get("max_tokens", 1000)
-        self.api_key = "sk-b1f7e3a3f60648638582f54c7e36de45"
+
+        self.api_key = ""
         self.base_url = "https://api.deepseek.com"
         self.model_name = "deepseek-chat"
         self.temperature =0.7
