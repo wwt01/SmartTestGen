@@ -18,18 +18,23 @@ public class CodeUtils {
      * @param methodName 方法名
      * @param returnType 返回类型
      * @param parameters 参数信息列表
+     * @param isStatic 是否为静态方法
      * @return 空方法代码
      */
-    public static String generateEmptyMethodCode(String methodName, String returnType, List<ParameterInfo> parameters) {
+    public static String generateEmptyMethodCode(String methodName, String returnType, List<ParameterInfo> parameters, boolean isStatic) {
         StringBuilder methodCode = new StringBuilder();
         
         // 添加方法声明
-        methodCode.append("public ").append(returnType).append(" ").append(methodName).append("(");
+        methodCode.append("public ");
+        if (isStatic) {
+            methodCode.append("static ");
+        }
+        methodCode.append(returnType).append(" " ).append(methodName).append("(");
         
         // 添加参数
         for (int i = 0; i < parameters.size(); i++) {
             ParameterInfo param = parameters.get(i);
-            methodCode.append(param.type).append(" ").append(param.name);
+            methodCode.append(param.type).append(" " ).append(param.name);
             if (i < parameters.size() - 1) {
                 methodCode.append(", ");
             }
@@ -52,6 +57,17 @@ public class CodeUtils {
         methodCode.append("\n}");
         
         return methodCode.toString();
+    }
+    
+    /**
+     * 生成空方法代码（默认非静态）
+     * @param methodName 方法名
+     * @param returnType 返回类型
+     * @param parameters 参数信息列表
+     * @return 空方法代码
+     */
+    public static String generateEmptyMethodCode(String methodName, String returnType, List<ParameterInfo> parameters) {
+        return generateEmptyMethodCode(methodName, returnType, parameters, false);
     }
 
     /**

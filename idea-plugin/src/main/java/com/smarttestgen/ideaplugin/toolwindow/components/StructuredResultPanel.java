@@ -21,6 +21,8 @@ public class StructuredResultPanel extends JPanel {
     private JTextField returnTypeField;
     /** 期望信息输入框 */
     private JTextField expectationField;
+    /** 静态方法勾选框 */
+    private JCheckBox isStaticCheckBox;
     /** 参数名称输入框列表 */
     private List<JTextField> parameterNameFields = new ArrayList<>();
     /** 参数类型输入框列表 */
@@ -122,12 +124,14 @@ public class StructuredResultPanel extends JPanel {
         boolean isReturnTypeGenerated = false;
         boolean isParametersGenerated = false;
         
+        boolean isStatic = false;
         if (rawResult != null && !rawResult.isEmpty()) {
             methodName = JsonUtils.extractField(rawResult, Constants.RESPONSE_METHOD_NAME_FIELD);
             isMethodNameGenerated = JsonUtils.extractBooleanField(rawResult, Constants.RESPONSE_METHOD_NAME_FIELD, Constants.RESPONSE_IS_CONSTRUCTED_FIELD);
             returnType = JsonUtils.extractField(rawResult, Constants.RESPONSE_RETURN_TYPE_FIELD);
             isReturnTypeGenerated = JsonUtils.extractBooleanField(rawResult, Constants.RESPONSE_RETURN_TYPE_FIELD, Constants.RESPONSE_IS_CONSTRUCTED_FIELD);
             isParametersGenerated = JsonUtils.extractBooleanField(rawResult, Constants.RESPONSE_PARAMETERS_FIELD, Constants.RESPONSE_IS_CONSTRUCTED_FIELD);
+            isStatic = JsonUtils.extractBooleanField(rawResult, "is_static");
         }
         
         // 方法名
@@ -137,6 +141,13 @@ public class StructuredResultPanel extends JPanel {
         methodNamePanel.add(methodNameField);
         methodNamePanel.add(Box.createHorizontalStrut(10));
         methodNamePanel.add(new JLabel("(Generated: " + isMethodNameGenerated + ")"));
+        
+        // 静态方法勾选框
+        isStaticCheckBox = new JCheckBox("Is Static Method");
+        isStaticCheckBox.setSelected(isStatic);
+        methodNamePanel.add(Box.createHorizontalStrut(20));
+        methodNamePanel.add(isStaticCheckBox);
+        
         contentPanel.add(methodNamePanel);
         
         // 参数
@@ -261,6 +272,10 @@ public class StructuredResultPanel extends JPanel {
     
     public String getExpectations() {
         return expectationField != null ? expectationField.getText() : "";
+    }
+    
+    public boolean isStaticMethod() {
+        return isStaticCheckBox != null ? isStaticCheckBox.isSelected() : false;
     }
     
     public String buildParametersJson() {

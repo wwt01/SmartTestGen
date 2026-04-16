@@ -65,3 +65,6 @@ idea-plugin/.run/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+test01/TheAlgorithms-Java/
+tests/repos/

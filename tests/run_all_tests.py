@@ -64,9 +64,9 @@ def main():
     print("=" * 70)
 
     steps = [
-        ("Step 1: Crawl Test Data from GitHub", "github_crawler.py"),
-        ("Step 2: Analyze and Select Test Cases", "test_analyzer.py"),
-        ("Step 3: Generate Requirements with LLM", "llm_requirement_generator.py"),
+        # ("Step 1: Crawl Test Data from GitHub", "github_crawler.py"),
+        # ("Step 2: Analyze and Select Test Cases", "test_analyzer.py"),
+        # ("Step 3: Generate Requirements with LLM", "llm_requirement_generator.py"),
         ("Step 4: Prepare Test Data Excel", "step1_prepare_data.py"),
         ("Step 5: Call Parse API and Init Session", "api_caller.py", "--step", "parse"),
         ("Step 6: Call Generate Test Code API", "api_caller.py", "--step", "generate"),

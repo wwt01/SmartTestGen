@@ -18,6 +18,7 @@ class StructuredRequest(BaseModel):
     return_type: str = Field(..., description="返回值类型")
     expectations: List[str] = Field(default_factory=list, description="断言逻辑列表")
     session_id: str = Field(..., description="会话标识，用于获取静态上下文")
+    is_static: Optional[bool] = Field(False, description="是否是静态方法")
 
 # 统一响应模型
 
@@ -44,6 +45,7 @@ class FixCompilationErrorRequest(BaseModel):
     code: str = Field(..., description="测试代码")
     error_message: str = Field(..., description="编译错误信息")
     session_id: str = Field(..., description="会话标识，用于获取静态上下文")
+    method_source: Optional[str] = Field("No information available yet.", description="方法源码")
 
 
 class PreCompileRequest(BaseModel):

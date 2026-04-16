@@ -21,8 +21,10 @@ LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 class CompilationUtil:
     """Java编译工具"""
 
-    @staticmethod
-    def check_javac_available() -> bool:
+    _junit_classpath: str = ""
+
+    @classmethod
+    def check_javac_available(cls) -> bool:
         """检查javac是否可用"""
         try:
             result = subprocess.run(
@@ -35,9 +37,12 @@ class CompilationUtil:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False
 
-    @staticmethod
-    def download_junit_jars() -> List[str]:
-        """下载JUnit jar文件"""
+    @classmethod
+    def download_junit_jars(cls) -> str:
+        """下载JUnit jar文件并返回classpath"""
+        if cls._junit_classpath:
+            return cls._junit_classpath
+
         os.makedirs(LIB_DIR, exist_ok=True)
 
         jar_urls = [
@@ -45,6 +50,9 @@ class CompilationUtil:
             (JUNIT_PLATFORM_COMMON_URL, "junit-platform-commons-1.10.0.jar"),
             (OPENTEST4J_URL, "opentest4j-1.3.0.jar"),
             (APIGUARDIAN_URL, "apiguardian-api-1.1.2.jar"),
+            # 添加其他常用依赖
+            ("https://repo1.maven.org/maven2/org/mockito/mockito-core/4.11.0/mockito-core-4.11.0.jar", "mockito-core-4.11.0.jar"),
+            ("https://repo1.maven.org/maven2/org/assertj/assertj-core/3.24.2/assertj-core-3.24.2.jar", "assertj-core-3.24.2.jar"),
         ]
 
         jar_paths = []
@@ -61,20 +69,18 @@ class CompilationUtil:
                     print(f"   ✅ Downloaded {filename}")
                 except Exception as e:
                     print(f"   ❌ Failed to download {filename}: {e}")
-                    return []
+                    return ""
 
-        return jar_paths
+        cls._junit_classpath = os.pathsep.join(jar_paths)
+        return cls._junit_classpath
 
-    @staticmethod
-    def get_junit_classpath() -> str:
+    @classmethod
+    def get_junit_classpath(cls) -> str:
         """获取JUnit classpath"""
-        jar_paths = CompilationUtil.download_junit_jars()
-        if jar_paths:
-            return os.pathsep.join(jar_paths)
-        return ""
+        return cls.download_junit_jars()
 
-    @staticmethod
-    def create_temp_project() -> Dict[str, str]:
+    @classmethod
+    def create_temp_project(cls) -> Dict[str, str]:
         """创建临时Java项目结构"""
         base_dir = tempfile.mkdtemp()
         project_dir = os.path.join(base_dir, "test_project")
@@ -91,8 +97,8 @@ class CompilationUtil:
             "target_dir": target_dir
         }
 
-    @staticmethod
-    def create_class_file(src_dir: str, package: str, class_name: str, code: str) -> str:
+    @classmethod
+    def create_class_file(cls, src_dir: str, package: str, class_name: str, code: str) -> str:
         """创建Java类文件"""
         package_dir = os.path.join(src_dir, *package.split('.'))
         os.makedirs(package_dir, exist_ok=True)
@@ -103,8 +109,8 @@ class CompilationUtil:
 
         return file_path
 
-    @staticmethod
-    def compile_project(src_dir: str, target_dir: str, classpath: str = "") -> Dict:
+    @classmethod
+    def compile_project(cls, src_dir: str, target_dir: str, classpath: str = "") -> Dict:
         """编译Java项目"""
         try:
             java_files = []
@@ -116,7 +122,7 @@ class CompilationUtil:
             if not java_files:
                 return {
                     "success": False,
-                    "error": "No Java files found",
+                    "error_message": "No Java files found",
                     "returncode": -1
                 }
 
@@ -138,39 +144,40 @@ class CompilationUtil:
                 "success": result.returncode == 0,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "error": result.stderr if result.returncode != 0 else "",
+                "error_message": result.stderr if result.returncode != 0 else "",
                 "returncode": result.returncode
             }
 
         except subprocess.TimeoutExpired:
             return {
                 "success": False,
-                "error": "Compilation timeout",
+                "error_message": "Compilation timeout",
                 "returncode": -1
             }
         except FileNotFoundError:
             return {
                 "success": False,
-                "error": "javac not found",
+                "error_message": "javac not found. Please install JDK.",
                 "returncode": -1
             }
         except Exception as e:
             return {
                 "success": False,
-                "error": str(e),
+                "error_message": str(e),
                 "returncode": -1
             }
 
-    @staticmethod
-    def cleanup_project(base_dir: str):
+    @classmethod
+    def cleanup_project(cls, base_dir: str):
         """清理临时项目"""
         try:
             shutil.rmtree(base_dir, ignore_errors=True)
         except Exception:
             pass
 
-    @staticmethod
+    @classmethod
     def compile_test_code(
+        cls,
         package_name: str,
         class_name: str,
         empty_method: str,
@@ -188,9 +195,16 @@ class CompilationUtil:
         Returns:
             编译结果字典
         """
-        project = CompilationUtil.create_temp_project()
+        base_dir = tempfile.mkdtemp()
 
         try:
+            project_dir = os.path.join(base_dir, "test_project")
+            src_dir = os.path.join(project_dir, "src")
+            target_dir = os.path.join(project_dir, "target")
+
+            os.makedirs(src_dir, exist_ok=True)
+            os.makedirs(target_dir, exist_ok=True)
+
             main_class_code = f"""package {package_name};
 
 public class {class_name} {{
@@ -199,33 +213,60 @@ public class {class_name} {{
 }}
 """
 
-            CompilationUtil.create_class_file(
-                project["src_dir"],
-                package_name,
-                class_name,
-                main_class_code
-            )
+            package_dir = os.path.join(src_dir, *package_name.split('.'))
+            os.makedirs(package_dir, exist_ok=True)
+
+            main_class_path = os.path.join(package_dir, f"{class_name}.java")
+            with open(main_class_path, 'w', encoding='utf-8') as f:
+                f.write(main_class_code)
 
             test_class_name = f"{class_name}Test"
-            CompilationUtil.create_class_file(
-                project["src_dir"],
-                package_name,
-                test_class_name,
-                test_code
+            test_class_path = os.path.join(package_dir, f"{test_class_name}.java")
+            with open(test_class_path, 'w', encoding='utf-8') as f:
+                f.write(test_code)
+
+            java_files = [main_class_path, test_class_path]
+
+            junit_classpath = cls.download_junit_jars()
+
+            cmd = ["javac", "-d", target_dir, "-encoding", "UTF-8"]
+            if junit_classpath:
+                cmd.extend(["-cp", junit_classpath])
+            cmd.extend(java_files)
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
             )
 
-            junit_classpath = CompilationUtil.get_junit_classpath()
+            return {
+                "success": result.returncode == 0,
+                "error_message": result.stderr if result.returncode != 0 else "",
+                "returncode": result.returncode
+            }
 
-            result = CompilationUtil.compile_project(
-                project["src_dir"],
-                project["target_dir"],
-                classpath=junit_classpath
-            )
-
-            return result
-
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error_message": "Compilation timeout",
+                "returncode": -1
+            }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "error_message": "javac not found. Please install JDK.",
+                "returncode": -1
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error_message": str(e),
+                "returncode": -1
+            }
         finally:
-            CompilationUtil.cleanup_project(project["base_dir"])
+            shutil.rmtree(base_dir, ignore_errors=True)
 
     @staticmethod
     def extract_error_summary(stderr: str) -> str:

@@ -200,7 +200,7 @@ def call_generate_test_code():
                 logger.info("   Compile success")
                 compile_success_count += 1
             else:
-                error_summary = CompilationUtil.extract_error_summary(compile_result.get("stderr", ""))
+                error_summary = CompilationUtil.extract_error_summary(compile_result.get("error_message", ""))
                 excel.update_cell(i, "compile_success", False)
                 excel.update_cell(i, "compile_error", error_summary)
                 logger.error(f"   Compile failed: {error_summary[:50]}...")
@@ -335,7 +335,7 @@ def call_fix_compilation_error():
                 total_fixed += 1
                 break
             else:
-                new_error = CompilationUtil.extract_error_summary(compile_result.get("stderr", ""))
+                new_error = CompilationUtil.extract_error_summary(compile_result.get("error_message", ""))
                 compile_error = new_error
                 logger.info("   Still failed")
 

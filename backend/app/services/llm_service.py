@@ -3,7 +3,7 @@ import logging
 import yaml
 import os
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
@@ -113,38 +113,24 @@ class LLMService:
         return self.store[session_id].static_context
 
     def filter_private_members(self, fields: List[Dict], methods: List[Dict]) -> tuple:
-        """过滤private成员，只保留public/protected"""
-        filtered_fields = [
-            f for f in fields
-            if f.get('visibility', 'public') in ['public', 'protected']
-        ]
-        filtered_methods = [
-            m for m in methods
-            if m.get('visibility', 'public') in ['public', 'protected']
-        ]
+        """不过滤成员，返回所有字段和方法"""
+        # 直接返回所有字段，不过滤
+        filtered_fields = []
+        for f in fields:
+            filtered_fields.append(f)
+
+        # 直接返回所有方法，不过滤
+        filtered_methods = []
+        for m in methods:
+            filtered_methods.append(m)
+
         return filtered_fields, filtered_methods
 
     def filter_relevant_methods(self, methods: List[Dict], target_method_name: str, class_name: str = "") -> List[Dict]:
-        """只保留相关方法：被测试方法、构造函数、getter/setter、以及少量其他public方法"""
+        """返回所有方法，不过滤"""
         relevant = []
         for m in methods:
-            name = m.get('name', '')
-
-            if name == target_method_name:
-                relevant.append(m)
-                continue
-
-            if name in ['<init>', 'constructor'] or name == class_name:
-                relevant.append(m)
-                continue
-
-            if name.startswith('get') or name.startswith('set') or name.startswith('is'):
-                relevant.append(m)
-                continue
-
-            if len(relevant) < 8:
-                relevant.append(m)
-
+            relevant.append(m)
         return relevant
 
     def filter_relevant_dependencies(self, dependencies: List[str], methods: List[Dict], fields: List[Dict]) -> List[str]:
@@ -152,10 +138,25 @@ class LLMService:
         used_types = set()
 
         for m in methods:
-            for p in m.get('parameters', []):
-                param_type = p.get('type', '')
-                if param_type:
-                    used_types.add(param_type)
+            parameters = m.get('parameters', [])
+            # 处理parameters是字符串的情况
+            if isinstance(parameters, str):
+                # 简单解析参数类型
+                import re
+                param_types = re.findall(r'\b(\w+)\s+\w+', parameters)
+                for param_type in param_types:
+                    if param_type:
+                        used_types.add(param_type)
+            else:
+                # 处理parameters是字典列表的情况
+                for p in parameters:
+                    if isinstance(p, dict):
+                        param_type = p.get('type', '')
+                        if param_type:
+                            used_types.add(param_type)
+                    elif isinstance(p, str):
+                        # 处理parameters是字符串列表的情况
+                        used_types.add(p)
             return_type = m.get('return_type', '')
             if return_type:
                 used_types.add(return_type)
@@ -273,8 +274,18 @@ class LLMService:
         """打印提示词（结构化、自动换行、清晰美观）"""
         print("\n" + "=" * 50 + " 完整提示词开始 " + "=" * 50)
 
-        # 如果是 LangChain 的消息列表，格式化输出
-        if hasattr(full_prompt, 'messages'):
+        # 处理不同类型的输入
+        if isinstance(full_prompt, dict):
+            # 处理字典类型输入
+            print("Input variables:")
+            print("-" * 80)
+            for key, value in full_prompt.items():
+                if isinstance(value, str) and len(value) > 100:
+                    print(f"{key}: {value[:100]}...")
+                else:
+                    print(f"{key}: {value}")
+        elif hasattr(full_prompt, 'messages'):
+            # 如果是 LangChain 的消息列表，格式化输出
             for i, msg in enumerate(full_prompt.messages):
                 role = msg.__class__.__name__.replace("Message", "").upper()
                 content = msg.content.strip()
@@ -282,7 +293,7 @@ class LLMService:
                 print("-" * 80)
                 print(content)
         else:
-            # 普通字符串直接输出
+            # 其他类型直接输出
             print(str(full_prompt))
 
         print("=" * 50 + " 完整提示词结束 " + "=" * 50 + "\n")
@@ -351,6 +362,12 @@ class LLMService:
 
             structured_data = json.loads(content)
 
+            # 确保返回的结果包含所有必要字段
+            if "database_dependency" not in structured_data:
+                structured_data["database_dependency"] = False
+            if "is_static" not in structured_data:
+                structured_data["is_static"] = False
+
             # 存入缓存
             self._set_cache(cache_key, structured_data)
 
@@ -359,6 +376,8 @@ class LLMService:
             logger.info(f"方法名: {structured_data.get('method_name')}")
             logger.info(f"参数数量: {len(structured_data.get('parameters', []))}")
             logger.info(f"返回类型: {structured_data.get('return_type')}")
+            logger.info(f"数据库依赖: {structured_data.get('database_dependency')}")
+            logger.info(f"是否静态: {structured_data.get('is_static')}")
             logger.info("=" * 60)
             return structured_data
 
@@ -369,6 +388,8 @@ class LLMService:
                 "parameters": [],
                 "return_type": "",
                 "expectations": [],
+                "database_dependency": False,
+                "is_static": False,
                 "is_constructed": {
                     "method_name": False,
                     "parameters": False,
@@ -397,15 +418,36 @@ class LLMService:
         parameters = structured_data.get("parameters", [])
         return_type = structured_data.get("return_type", "")
         expectations = structured_data.get("expectations", [])
+        is_static = structured_data.get("is_static", False)
 
         class_name = static_context.get("class_name", "Example")
+        # 验证类名是否为Java关键字
+        java_keywords = {
+            'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const',
+            'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float',
+            'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native',
+            'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super',
+            'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while'
+        }
+        # 如果类名是Java关键字，使用一个默认的类名
+        if class_name.lower() in java_keywords:
+            logger.warning(f"Class name '{class_name}' is a Java keyword, using 'Example' instead")
+            class_name = "Example"
+
         is_interface = static_context.get("is_interface", False)
         package_name = static_context.get("package_name", "")
-        class_type = static_context.get("class_type", "Unknown")
+        class_type = static_context.get("class_type") or "Unknown"
         fields = static_context.get("fields", [])
         methods = static_context.get("methods", [])
         dependencies = static_context.get("dependencies", [])
-
+        print("类名: " + class_name)
+        print("接口: " + str(is_interface))
+        print("包名: " + package_name)
+        print("类类型: " + class_type)
+        print("静态方法: " + str(is_static))
+        print("字段: " + str(fields))
+        print("方法: " + str(methods))
+        print("依赖: " + str(dependencies))
         # 优化上下文数据，只传递与当前测试方法相关的信息
         relevant_methods = self.filter_relevant_methods(methods, method_name, class_name)
         relevant_fields = [f for f in fields if f.get('visibility', 'public') in ['public', 'protected']]
@@ -421,13 +463,32 @@ class LLMService:
             })
 
         simplified_methods = []
+        constructors = []
         for method in relevant_methods:
+            current_method_name = method.get('name', '')
+            # 检查是否是构造函数
+            if current_method_name == class_name or current_method_name == '<init>' or current_method_name == 'constructor':
+                constructors.append({
+                    'parameters': method.get('parameters', []),
+                    'visibility': method.get('visibility', 'public')
+                })
             simplified_methods.append({
-                'name': method.get('name', ''),
+                'name': current_method_name,
                 'parameters': method.get('parameters', []),
                 'return_type': method.get('return_type', ''),
                 'visibility': method.get('visibility', 'public')
             })
+
+        # 检查是否有带参数的构造函数
+        has_parameterized_constructor = False
+        for constructor in constructors:
+            params = constructor.get('parameters', [])
+            if isinstance(params, str) and params.strip() != '':
+                has_parameterized_constructor = True
+                break
+            elif isinstance(params, list) and len(params) > 0:
+                has_parameterized_constructor = True
+                break
 
         logger.info(f"目标方法: {method_name}")
         logger.info(f"参数数量: {len(parameters)} | 返回类型: {return_type}")
@@ -450,6 +511,7 @@ class LLMService:
 - Parameters: {parameters}
 - Return type: {return_type}
 - Expectations: {expectations}
+- Is static method: {is_static}
 
 Generate the complete Java unit test code."""
 
@@ -458,6 +520,12 @@ Generate the complete Java unit test code."""
         formatted_fields = json.dumps(simplified_fields, ensure_ascii=False, indent=2)
         formatted_methods = json.dumps(simplified_methods, ensure_ascii=False, indent=2)
         formatted_dependencies = "\n".join([f"- {dep}" for dep in relevant_dependencies]) if relevant_dependencies else "No dependencies"
+
+        # 检查是否有数据库依赖
+        database_dependency = structured_data.get("database_dependency", False)
+
+        # 格式化构造函数信息
+        formatted_constructors = json.dumps(constructors, ensure_ascii=False, indent=2)
 
         variables = {
             "class_name": class_name,
@@ -470,7 +538,11 @@ Generate the complete Java unit test code."""
             "class_type": class_type,
             "fields": formatted_fields,
             "methods": formatted_methods,
-            "dependencies": formatted_dependencies
+            "constructors": formatted_constructors,
+            "has_parameterized_constructor": has_parameterized_constructor,
+            "dependencies": formatted_dependencies,
+            "database_dependency": database_dependency,
+            "is_static": is_static
         }
 
         try:
@@ -538,6 +610,7 @@ Generate the complete Java unit test code."""
         parameters = structured_data.get("parameters", [])
         return_type = structured_data.get("return_type", "void")
         file_content = structured_data.get("file_content", "")
+        is_static = structured_data.get("is_static", False)
 
         logger.info(f"Generating empty method code for: {method_name}")
         logger.info(f"Parameters: {parameters}")
@@ -578,7 +651,8 @@ Generate the complete Java unit test code."""
                 method_body = f"    {default_value}"
 
             # 拼接完整方法
-            method_code = f"public {return_type} {method_name}({params_str}) {{\n{method_body}\n}}"
+            static_modifier = "static " if is_static else ""
+            method_code = f"public {static_modifier}{return_type} {method_name}({params_str}) {{\n{method_body}\n}}"
 
             logger.info("Empty method code generation completed successfully")
             logger.info(f"Generated method: {method_code}")
@@ -619,7 +693,7 @@ Generate the complete Java unit test code."""
             return "throw new UnsupportedOperationException(\"Method not implemented yet\");"
 
     def fix_compilation_error(self, error_data: Dict[str, Any]) -> str:
-        """修复编译错误 - 使用LangChain，简化版本，只传入错误代码和错误信息"""
+        """修复编译错误 - 使用LangChain，只获取静态上下文，不使用历史记录"""
         logger.info("Starting fix_compilation_error")
 
         session_id = error_data.get("session_id")
@@ -629,10 +703,16 @@ Generate the complete Java unit test code."""
 
         code = error_data.get("code", "")
         error_message = error_data.get("error_message", "")
+        method_source = error_data.get("method_source", "No information available yet.")
 
-        logger.info(f"Fixing compilation error")
+        logger.info("Fixing compilation error")
         logger.info(f"Error message: {error_message}")
         logger.info(f"Code length: {len(code)}")
+        logger.info(f"Method source: {method_source}")
+
+        # 获取静态上下文
+        static_context = self.get_static_context(session_id)
+        logger.info(f"Retrieved static context: {static_context}")
 
         system_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_system_prompt", "")
         user_prompt = self.prompts.get("llm", {}).get("fix_compilation_error_user_prompt", "")
@@ -640,47 +720,53 @@ Generate the complete Java unit test code."""
         if not system_prompt:
             system_prompt = "You are an expert in Java development, debugging, and JUnit 5. Your ONLY task is to FIX COMPILATION ERRORS in the given test code according to the error message. DO NOT modify, add, or delete any business logic. DO NOT replace or rewrite test methods. DO NOT add new test methods. KEEP ALL original methods and functionality UNCHANGED."
         if not user_prompt:
-            user_prompt = "# Test Code with Errors\n```java\n{code}\n```\n\n# Compilation Error Message\n{error_message}\n\nGenerate the complete fixed test code with all compilation errors resolved."
+            user_prompt = "# Test Code with Errors\n```java\n{code}\n```\n\n# Compilation Error Message\n{error_message}\n\n# Static Context\n{static_context}\n\nGenerate the complete fixed test code with all compilation errors resolved."
 
         try:
             logger.info("Calling LLM for fixing compilation error with LangChain")
 
+            # 准备静态上下文信息
+            context_info = ""
+            if static_context:
+                class_name = static_context.get("class_name", "")
+                package_name = static_context.get("package_name", "")
+                methods = static_context.get("methods", [])
+                fields = static_context.get("fields", [])
+
+                context_info = f"Class: {class_name}\nPackage: {package_name}\n\nMethods:\n"
+                for method in methods:
+                    method_name = method.get("name", "")
+                    parameters = method.get("parameters", [])
+                    return_type = method.get("return_type", "")
+                    # 转义参数中的{和}，避免被LangChain解释为变量
+                    params_str = str(parameters).replace("{", "{{").replace("}", "}}")
+                    context_info += f"- {return_type} {method_name}({params_str})\n"
+
+                context_info += "\nFields:\n"
+                for field in fields:
+                    field_name = field.get("name", "")
+                    field_type = field.get("type", "")
+                    context_info += f"- {field_type} {field_name}\n"
+
             variables = {
                 "code": code,
-                "error_message": error_message
+                "error_message": error_message,
+                "static_context": context_info,
+                "method_source": method_source
             }
 
-            if session_id:
-                logger.info(f"Using session memory for session_id: {session_id}")
+            # 不使用历史记录，只使用静态上下文
+            # 先转义context_info中的{和}，避免被LangChain解释为变量
+            escaped_context_info = context_info.replace("{", "{{").replace("}", "}}")
+            # 替换系统提示词中的静态上下文占位符
+            system_prompt_with_context = system_prompt.replace("{static_context}", escaped_context_info)
+            prompt_template_obj = ChatPromptTemplate.from_messages([
+                ("system", system_prompt_with_context),
+                ("human", user_prompt)
+            ])
 
-                prompt_template_obj = ChatPromptTemplate.from_messages([
-                    ("system", system_prompt),
-                    MessagesPlaceholder(variable_name="history"),
-                    ("human", user_prompt)
-                ])
-
-                chain = prompt_template_obj | self.print_prompt | self.llm
-
-                with_message_history = RunnableWithMessageHistory(
-                    chain,
-                    self.get_session_history,
-                    input_messages_key=None,
-                    history_messages_key="history",
-                )
-
-                response = with_message_history.invoke(
-                    variables,
-                    config={"configurable": {"session_id": session_id}}
-                )
-            else:
-                prompt_template_obj = ChatPromptTemplate.from_messages([
-                    ("system", system_prompt),
-                    ("human", user_prompt)
-                ])
-
-                chain = prompt_template_obj | self.llm
-
-                response = chain.invoke(variables)
+            chain = prompt_template_obj | self.print_prompt | self.llm
+            response = chain.invoke(variables)
 
             fixed_code = response.content
 

@@ -98,7 +98,7 @@ public class CodeEditorPanel extends JPanel {
         ));
         
         compilationErrorArea = new JTextArea();
-        compilationErrorArea.setEditable(false);
+        compilationErrorArea.setEditable(true);
         compilationErrorArea.setFont(JBUI.Fonts.create("Monospaced", 12));
         compilationErrorArea.setBackground(new JBColor(new Color(255, 245, 245), new Color(45, 45, 48)));
         compilationErrorArea.setForeground(new JBColor(JBColor.RED, new Color(255, 100, 100)));

@@ -162,8 +162,46 @@ public class JsonUtils {
             if (fieldStartIndex == -1) return false;
             
             fieldStartIndex += fieldPattern.length();
-            int fieldEndIndex = json.indexOf(",", fieldStartIndex);
-            if (fieldEndIndex == -1) fieldEndIndex = json.indexOf("}", fieldStartIndex);
+            int fieldEndIndex = json.indexOf(',', fieldStartIndex);
+            if (fieldEndIndex == -1) fieldEndIndex = json.indexOf('}', fieldStartIndex);
+            if (fieldEndIndex == -1) return false;
+            
+            return Boolean.parseBoolean(json.substring(fieldStartIndex, fieldEndIndex).trim());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 从 JSON 字符串中提取布尔字段值（直接从 structured_result 中提取）
+     * @param json JSON字符串
+     * @param fieldName 字段名
+     * @return 布尔字段值
+     */
+    public static boolean extractBooleanField(String json, String fieldName) {
+        try {
+            // 先找到 data 字段
+            String dataPattern = "\"data\":{";
+            int dataStartIndex = json.indexOf(dataPattern);
+            if (dataStartIndex == -1) return false;
+            
+            dataStartIndex += dataPattern.length();
+            
+            // 再找到 structured_result 字段
+            String structuredResultPattern = "\"structured_result\":{";
+            int structuredResultStartIndex = json.indexOf(structuredResultPattern, dataStartIndex);
+            if (structuredResultStartIndex == -1) return false;
+            
+            structuredResultStartIndex += structuredResultPattern.length();
+            
+            // 找到目标字段
+            String fieldPattern = "\"" + fieldName + "\":";
+            int fieldStartIndex = json.indexOf(fieldPattern, structuredResultStartIndex);
+            if (fieldStartIndex == -1) return false;
+            
+            fieldStartIndex += fieldPattern.length();
+            int fieldEndIndex = json.indexOf(',', fieldStartIndex);
+            if (fieldEndIndex == -1) fieldEndIndex = json.indexOf('}', fieldStartIndex);
             if (fieldEndIndex == -1) return false;
             
             return Boolean.parseBoolean(json.substring(fieldStartIndex, fieldEndIndex).trim());
@@ -200,7 +238,7 @@ public class JsonUtils {
             if (fieldStartIndex == -1) return "";
             
             fieldStartIndex += fieldPattern.length();
-            int fieldEndIndex = json.indexOf("]", fieldStartIndex);
+            int fieldEndIndex = json.indexOf(']', fieldStartIndex);
             if (fieldEndIndex == -1) return "";
             
             return json.substring(fieldStartIndex, fieldEndIndex).trim();

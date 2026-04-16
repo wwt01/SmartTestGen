@@ -18,16 +18,16 @@ def load_test_data_from_json():
     json_path = os.path.join(results_dir, "test_cases_with_requirements.json")
 
     if not os.path.exists(json_path):
-        print(f"❌ 错误：文件不存在 {json_path}")
+        print(f"[ERROR] 错误：文件不存在 {json_path}")
         return []
 
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        print(f"✅ 成功加载 {len(data)} 条测试用例 from test_cases_with_requirements.json")
+        print(f"[SUCCESS] 成功加载 {len(data)} 条测试用例 from test_cases_with_requirements.json")
         return data
     except Exception as e:
-        print(f"❌ 读取JSON失败: {e}")
+        print(f"[ERROR] 读取JSON失败: {e}")
         return []
 
 
@@ -46,7 +46,7 @@ def create_test_data():
     test_cases = load_test_data_from_json()
 
     if not test_cases:
-        print("❌ 没有测试数据，退出")
+        print("[ERROR] 没有测试数据，退出")
         return None
 
     # 创建Excel
@@ -61,10 +61,10 @@ def create_test_data():
     excel.save()
 
     # 输出结果
-    print(f"\n✅ 测试数据已保存到: {excel_path}")
-    print(f"📊 总用例数: {len(test_cases)}")
+    print(f"\n[SUCCESS] 测试数据已保存到: {excel_path}")
+    print(f"[INFO] 总用例数: {len(test_cases)}")
     print("=" * 60)
-    print("Step1 完成！仅使用JSON文件数据 ✅")
+    print("Step1 完成！仅使用JSON文件数据 [SUCCESS]")
     print("=" * 60)
 
     return excel_path

@@ -177,6 +177,7 @@ public class TestCodeService {
             String returnType,
             String parametersStr,
             String expectationsStr,
+            boolean isStatic,
             Consumer<TestCodeResult> onSuccess,
             Consumer<String> onError) {
         
@@ -186,7 +187,7 @@ public class TestCodeService {
         
         CompletableFuture.runAsync(() -> {
             try {
-                String requestBody = buildTestRequestWithSession(sessionId, methodName, returnType, parametersStr, expectationsStr);
+                String requestBody = buildTestRequestWithSession(sessionId, methodName, returnType, parametersStr, expectationsStr, isStatic);
                 LogUtil.request("GenerateTest", requestBody);
                 
                 String response = ApiService.generateTestCode(requestBody);
@@ -221,7 +222,8 @@ public class TestCodeService {
             String methodName, 
             String returnType, 
             String parametersStr, 
-            String expectationsStr) {
+            String expectationsStr,
+            boolean isStatic) {
         
         String parametersArray = parametersStr;
         if (parametersArray == null || parametersArray.isEmpty()) {
@@ -247,7 +249,8 @@ public class TestCodeService {
                 "\"method_name\":\"" + escapeContent(methodName) + "\"," +
                 "\"parameters\":" + parametersArray + "," +
                 "\"return_type\":\"" + escapeContent(returnType) + "\"," +
-                "\"expectations\":" + expectationsJson +
+                "\"expectations\":" + expectationsJson + "," +
+                "\"is_static\":" + isStatic +
                 "}";
     }
     

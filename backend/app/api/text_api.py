@@ -77,7 +77,8 @@ async def generate_test_code(
             "parameters": request.parameters,
             "return_type": request.return_type,
             "expectations": request.expectations,
-            "session_id": request.session_id
+            "session_id": request.session_id,
+            "is_static": request.is_static
         })
         if "error" in result:
             elapsed = (time.time() - start_time) * 1000
@@ -109,7 +110,8 @@ async def fix_compilation_error(
         result = text_service.fix_compilation_error({
             "code": request.code,
             "error_message": request.error_message,
-            "session_id": request.session_id
+            "session_id": request.session_id,
+            "method_source": request.method_source
         })
         if "error" in result:
             elapsed = (time.time() - start_time) * 1000

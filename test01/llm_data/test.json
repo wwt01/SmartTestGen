@@ -1,0 +1,976 @@
+[
+    {
+        "id": 1,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "AbsoluteMax",
+        "is_interface": false,
+        "method_name": "getMaxValue",
+        "parameters": "int... numbers",
+        "return_type": "int",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"int\", \"name\": \"absMax\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"absMax\"}]",
+        "dependencies": [],
+        "original_code": "public static int getMaxValue(int... numbers) {\n        if (numbers == null || numbers.length == 0) {\n            throw new IllegalArgumentException(\"Numbers array cannot be empty or null\");\n        }",
+        "class_methods": [],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\AbsoluteMax.java",
+        "description": "方法名称：getMaxValue  \n参数名称类型：int... numbers  \n返回值类型：int  \n核心逻辑：接收可变数量的整数参数，检查参数数组是否为null或空，若是则抛出IllegalArgumentException异常，否则返回数组中的最大值  \n是否是静态方法：是"
+    },
+    {
+        "id": 3,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "AbsoluteValue",
+        "is_interface": false,
+        "method_name": "getAbsValue",
+        "parameters": "int number",
+        "return_type": "int",
+        "fields": "[]",
+        "dependencies": [],
+        "original_code": "public static int getAbsValue(int number) {\n        return Math.abs(number);\n    }",
+        "class_methods": [],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\AbsoluteValue.java",
+        "description": "方法名称：getAbsValue  \n参数名称类型：int number  \n返回值类型：int  \n核心逻辑：计算并返回输入整数的绝对值  \n是否是静态方法：是"
+    },
+    {
+        "id": 9,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Area",
+        "is_interface": false,
+        "method_name": "surfaceAreaCube",
+        "parameters": "final double sideLength",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"baseArea\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"lateralSurfaceArea\"}]",
+        "dependencies": [],
+        "original_code": "public static double surfaceAreaCube(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side length must be greater than 0\");\n        }",
+        "class_methods": [
+            {
+                "method_name": "surfaceAreaCuboid",
+                "return_type": "double",
+                "parameters": "final double length, double width, double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCuboid(final double length, double width, double height) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaPyramid",
+                "return_type": "double",
+                "parameters": "final double sideLength, final double slantHeight",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaPyramid(final double sideLength, final double slantHeight) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaRectangle",
+                "return_type": "double",
+                "parameters": "final double length, final double width",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaRectangle(final double length, final double width) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCylinder",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCylinder(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSquare",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSquare(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTriangle",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTriangle(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaParallelogram",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaParallelogram(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTrapezium",
+                "return_type": "double",
+                "parameters": "final double baseLength1, final double baseLength2, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTrapezium(final double baseLength1, final double baseLength2, final double height) {\n        if (baseLength1 <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE + 1);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCircle",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCircle(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaHemisphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaHemisphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCone",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCone(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Area.java",
+        "description": "方法名称：surfaceAreaCube  \n参数名称类型：sideLength，double类型  \n返回值类型：double  \n核心逻辑：计算立方体的表面积，公式为6 * sideLength * sideLength。如果sideLength小于等于0，抛出IllegalArgumentException异常，提示\"Side length must be greater than 0\"。  \n是否是静态方法：是"
+    },
+    {
+        "id": 11,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Area",
+        "is_interface": false,
+        "method_name": "surfaceAreaSphere",
+        "parameters": "final double radius",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"baseArea\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"lateralSurfaceArea\"}]",
+        "dependencies": [],
+        "original_code": "public static double surfaceAreaSphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }",
+        "class_methods": [
+            {
+                "method_name": "surfaceAreaCube",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCube(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCuboid",
+                "return_type": "double",
+                "parameters": "final double length, double width, double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCuboid(final double length, double width, double height) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaPyramid",
+                "return_type": "double",
+                "parameters": "final double sideLength, final double slantHeight",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaPyramid(final double sideLength, final double slantHeight) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaRectangle",
+                "return_type": "double",
+                "parameters": "final double length, final double width",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaRectangle(final double length, final double width) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCylinder",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCylinder(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSquare",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSquare(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTriangle",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTriangle(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaParallelogram",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaParallelogram(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTrapezium",
+                "return_type": "double",
+                "parameters": "final double baseLength1, final double baseLength2, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTrapezium(final double baseLength1, final double baseLength2, final double height) {\n        if (baseLength1 <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE + 1);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCircle",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCircle(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaHemisphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaHemisphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCone",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCone(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Area.java",
+        "description": "方法名称：surfaceAreaSphere  \n参数名称类型：radius，double类型  \n返回值类型：double  \n核心逻辑：计算并返回球体的表面积，计算公式为4 * π * radius²。如果半径小于等于0，抛出IllegalArgumentException异常，异常消息为常量POSITIVE_RADIUS的值。  \n是否是静态方法：是"
+    },
+    {
+        "id": 13,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Area",
+        "is_interface": false,
+        "method_name": "surfaceAreaRectangle",
+        "parameters": "final double length, final double width",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"baseArea\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"lateralSurfaceArea\"}]",
+        "dependencies": [],
+        "original_code": "public static double surfaceAreaRectangle(final double length, final double width) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }",
+        "class_methods": [
+            {
+                "method_name": "surfaceAreaCube",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCube(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCuboid",
+                "return_type": "double",
+                "parameters": "final double length, double width, double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCuboid(final double length, double width, double height) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaPyramid",
+                "return_type": "double",
+                "parameters": "final double sideLength, final double slantHeight",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaPyramid(final double sideLength, final double slantHeight) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCylinder",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCylinder(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSquare",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSquare(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTriangle",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTriangle(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaParallelogram",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaParallelogram(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTrapezium",
+                "return_type": "double",
+                "parameters": "final double baseLength1, final double baseLength2, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTrapezium(final double baseLength1, final double baseLength2, final double height) {\n        if (baseLength1 <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE + 1);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCircle",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCircle(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaHemisphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaHemisphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCone",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCone(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Area.java",
+        "description": "方法名称：surfaceAreaRectangle  \n参数名称类型：length（double类型），width（double类型）  \n返回值类型：double  \n核心逻辑：计算矩形的表面积（即面积），公式为length乘以width。在计算前需验证参数，若length小于等于0，则抛出IllegalArgumentException异常，提示信息为\"Length must be greater than 0\"。  \n是否是静态方法：是"
+    },
+    {
+        "id": 15,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Area",
+        "is_interface": false,
+        "method_name": "surfaceAreaSquare",
+        "parameters": "final double sideLength",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"baseArea\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"lateralSurfaceArea\"}]",
+        "dependencies": [],
+        "original_code": "public static double surfaceAreaSquare(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side Length must be greater than 0\");\n        }",
+        "class_methods": [
+            {
+                "method_name": "surfaceAreaCube",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCube(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCuboid",
+                "return_type": "double",
+                "parameters": "final double length, double width, double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCuboid(final double length, double width, double height) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaPyramid",
+                "return_type": "double",
+                "parameters": "final double sideLength, final double slantHeight",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaPyramid(final double sideLength, final double slantHeight) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaRectangle",
+                "return_type": "double",
+                "parameters": "final double length, final double width",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaRectangle(final double length, final double width) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCylinder",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCylinder(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTriangle",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTriangle(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaParallelogram",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaParallelogram(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTrapezium",
+                "return_type": "double",
+                "parameters": "final double baseLength1, final double baseLength2, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTrapezium(final double baseLength1, final double baseLength2, final double height) {\n        if (baseLength1 <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE + 1);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCircle",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCircle(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaHemisphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaHemisphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCone",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCone(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Area.java",
+        "description": "方法名称：surfaceAreaSquare  \n参数名称类型：sideLength，double类型  \n返回值类型：double  \n核心逻辑：计算正方形的表面积（即面积），若sideLength小于等于0则抛出IllegalArgumentException异常，异常消息为\"Side Length must be greater than 0\"  \n是否是静态方法：是"
+    },
+    {
+        "id": 21,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Area",
+        "is_interface": false,
+        "method_name": "surfaceAreaCone",
+        "parameters": "final double radius, final double height",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"baseArea\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"lateralSurfaceArea\"}]",
+        "dependencies": [],
+        "original_code": "public static double surfaceAreaCone(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }",
+        "class_methods": [
+            {
+                "method_name": "surfaceAreaCube",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCube(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCuboid",
+                "return_type": "double",
+                "parameters": "final double length, double width, double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCuboid(final double length, double width, double height) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaPyramid",
+                "return_type": "double",
+                "parameters": "final double sideLength, final double slantHeight",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaPyramid(final double sideLength, final double slantHeight) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaRectangle",
+                "return_type": "double",
+                "parameters": "final double length, final double width",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaRectangle(final double length, final double width) {\n        if (length <= 0) {\n            throw new IllegalArgumentException(\"Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCylinder",
+                "return_type": "double",
+                "parameters": "final double radius, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCylinder(final double radius, final double height) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaSquare",
+                "return_type": "double",
+                "parameters": "final double sideLength",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaSquare(final double sideLength) {\n        if (sideLength <= 0) {\n            throw new IllegalArgumentException(\"Side Length must be greater than 0\");\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTriangle",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTriangle(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaParallelogram",
+                "return_type": "double",
+                "parameters": "final double baseLength, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaParallelogram(final double baseLength, final double height) {\n        if (baseLength <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaTrapezium",
+                "return_type": "double",
+                "parameters": "final double baseLength1, final double baseLength2, final double height",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaTrapezium(final double baseLength1, final double baseLength2, final double height) {\n        if (baseLength1 <= 0) {\n            throw new IllegalArgumentException(POSITIVE_BASE + 1);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaCircle",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaCircle(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            },
+            {
+                "method_name": "surfaceAreaHemisphere",
+                "return_type": "double",
+                "parameters": "final double radius",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double surfaceAreaHemisphere(final double radius) {\n        if (radius <= 0) {\n            throw new IllegalArgumentException(POSITIVE_RADIUS);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Area.java",
+        "description": "方法名称：surfaceAreaCone  \n参数名称类型：radius (double类型), height (double类型)  \n返回值类型：double  \n核心逻辑：计算并返回圆锥体的表面积。计算公式为：π * radius * (radius + √(height² + radius²))。在计算前，需验证半径参数radius是否大于0；若radius小于等于0，则抛出IllegalArgumentException异常，异常消息应为常量POSITIVE_RADIUS所定义的字符串。  \n是否是静态方法：是"
+    },
+    {
+        "id": 25,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "AutomorphicNumber",
+        "is_interface": false,
+        "method_name": "isAutomorphic3",
+        "parameters": "String s",
+        "return_type": "boolean",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"return\", \"name\": \"false\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"square\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"t\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"numberOfdigits\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"lastDigits\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"n\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"false\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"square\"}, {\"visibility\": \"default\", \"type\": \"BigInteger\", \"name\": \"n\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"false\"}, {\"visibility\": \"default\", \"type\": \"BigInteger\", \"name\": \"square\"}]",
+        "dependencies": [
+            "java.math.BigInteger"
+        ],
+        "original_code": "public static boolean isAutomorphic3(String s) {\n        BigInteger n = new BigInteger(s);\n        if (n.signum() == -1) {\n            return false; // if number is negative, return false\n        }",
+        "class_methods": [
+            {
+                "method_name": "isAutomorphic",
+                "return_type": "boolean",
+                "parameters": "long n",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static boolean isAutomorphic(long n) {\n        if (n < 0) {\n            return false;\n        }"
+            },
+            {
+                "method_name": "isAutomorphic2",
+                "return_type": "boolean",
+                "parameters": "long n",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static boolean isAutomorphic2(long n) {\n        if (n < 0) {\n            return false;\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\AutomorphicNumber.java",
+        "description": "方法名称：isAutomorphic3  \n参数名称类型：String s  \n返回值类型：boolean  \n核心逻辑：  \n1. 将输入字符串s转换为BigInteger对象n。  \n2. 检查n的符号：如果n为负数（即n.signum()等于-1），则直接返回false。  \n3. 该方法旨在判断一个数字是否为自守数，但当前代码仅完成负数的检查，后续逻辑未在提供代码中展示。  \n是否是静态方法：是"
+    },
+    {
+        "id": 38,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Combinations",
+        "is_interface": false,
+        "method_name": "combinationsOptimized",
+        "parameters": "int n, int k",
+        "return_type": "long",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"return\", \"name\": \"n\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"solution\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"solution\"}]",
+        "dependencies": [],
+        "original_code": "public static long combinationsOptimized(int n, int k) {\n        if (n < 0 || k < 0) {\n            throw new IllegalArgumentException(\"n or k can't be negative\");\n        }",
+        "class_methods": [
+            {
+                "method_name": "factorial",
+                "return_type": "long",
+                "parameters": "int n",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static long factorial(int n) {\n        if (n < 0) {\n            throw new IllegalArgumentException(\"number is negative\");\n        }"
+            },
+            {
+                "method_name": "combinations",
+                "return_type": "long",
+                "parameters": "int n, int k",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static long combinations(int n, int k) {\n        return factorial(n) / (factorial(k) * factorial(n - k));\n    }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Combinations.java",
+        "description": "方法名称：combinationsOptimized  \n参数名称类型：int n, int k  \n返回值类型：long  \n核心逻辑：计算组合数C(n, k)，要求n和k均为非负整数，若任一参数为负则抛出IllegalArgumentException异常，否则返回组合数结果。  \n是否是静态方法：是"
+    },
+    {
+        "id": 42,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "DigitalRoot",
+        "is_interface": false,
+        "method_name": "single",
+        "parameters": "int n",
+        "return_type": "int",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"return\", \"name\": \"n\"}]",
+        "dependencies": [],
+        "original_code": "public static int single(int n) {\n        if (n <= 9) { // if n becomes less than 10 than return n\n            return n;\n        }",
+        "class_methods": [
+            {
+                "method_name": "digitalRoot",
+                "return_type": "int",
+                "parameters": "int n",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static int digitalRoot(int n) {\n        if (single(n) <= 9) { // If n is already single digit than simply call single method and\n                              // return the value\n            return single(n);\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\DigitalRoot.java",
+        "description": "方法名称：single  \n参数名称类型：int n  \n返回值类型：int  \n核心逻辑：如果参数n小于等于9，则直接返回n；否则继续执行后续处理（未在提供代码中完整展示，但根据上下文需说明存在进一步逻辑）。  \n是否是静态方法：是"
+    },
+    {
+        "id": 47,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "DistanceFormula",
+        "is_interface": false,
+        "method_name": "minkowskiDistance",
+        "parameters": "double[] p1, double[] p2, int p",
+        "return_type": "double",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"dX\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"dY\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"d\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"d\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"d\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"distance\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"d\"}]",
+        "dependencies": [],
+        "original_code": "public static double minkowskiDistance(double[] p1, double[] p2, int p) {\n        double d = 0;\n        double distance = 0.0;\n\n        if (p1.length != p2.length) {\n            return -1; // error, both arrays must have the same length\n        }",
+        "class_methods": [
+            {
+                "method_name": "euclideanDistance",
+                "return_type": "double",
+                "parameters": "double x1, double y1, double x2, double y2",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double euclideanDistance(double x1, double y1, double x2, double y2) {\n        double dX = Math.pow(x2 - x1, 2);\n        double dY = Math.pow(y2 - x1, 2);\n        return Math.sqrt(dX + dY);\n    }"
+            },
+            {
+                "method_name": "manhattanDistance",
+                "return_type": "double",
+                "parameters": "double x1, double y1, double x2, double y2",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double manhattanDistance(double x1, double y1, double x2, double y2) {\n        return Math.abs(x1 - x2) + Math.abs(y1 - y2);\n    }"
+            },
+            {
+                "method_name": "hammingDistance",
+                "return_type": "int",
+                "parameters": "int[] b1, int[] b2",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static int hammingDistance(int[] b1, int[] b2) {\n        int d = 0;\n\n        if (b1.length != b2.length) {\n            return -1; // error, both arrays must have the same length\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\DistanceFormula.java",
+        "description": "方法名称：minkowskiDistance  \n参数名称类型：double[] p1, double[] p2, int p  \n返回值类型：double  \n核心逻辑：计算两个双精度浮点数数组p1和p2之间的闵可夫斯基距离。首先检查两个数组长度是否相等，若不等则返回-1表示错误。若长度相等，则根据参数p的值计算距离：对两个数组对应元素的差的绝对值的p次方求和，然后对总和开p次方根，得到最终距离。  \n是否是静态方法：是"
+    },
+    {
+        "id": 49,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "EulerMethod",
+        "is_interface": false,
+        "method_name": "main",
+        "parameters": "String[] args",
+        "return_type": "void",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"double\", \"name\": \"yCurrent\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"xCurrent\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"points\"}]",
+        "dependencies": [
+            "java.util.function.BiFunction",
+            "java.util.ArrayList"
+        ],
+        "original_code": "public static void main(String[] args) {\n        System.out.println(\"example 1:\");\n        BiFunction<Double, Double, Double> exampleEquation1 = (x, y) -> x;\n        ArrayList<double[]> points1 = eulerFull(0, 4, 0.1, 0, exampleEquation1);\n        assert points1.get(points1.size() - 1)[1] == 7.800000000000003;\n        points1.forEach(point -> System.out.printf(\"x: %1$f; y: %2$f%n\", point[0], point[1]));\n\n        // example from https://en.wikipedia.org/wiki/Euler_method\n        System.out.println(\"\\n\\nexample 2:\");\n        BiFunction<Double, Double, Double> exampleEquation2 = (x, y) -> y;\n        ArrayList<double[]> points2 = eulerFull(0, 4, 0.1, 1, exampleEquation2);\n        assert points2.get(points2.size() - 1)[1] == 45.25925556817596;\n        points2.forEach(point -> System.out.printf(\"x: %1$f; y: %2$f%n\", point[0], point[1]));\n\n        // example from https://www.geeksforgeeks.org/euler-method-solving-differential-equation/\n        System.out.println(\"\\n\\nexample 3:\");\n        BiFunction<Double, Double, Double> exampleEquation3 = (x, y) -> x + y + x * y;\n        ArrayList<double[]> points3 = eulerFull(0, 0.1, 0.025, 1, exampleEquation3);\n        assert points3.get(points3.size() - 1)[1] == 1.1116729841674804;\n        points3.forEach(point -> System.out.printf(\"x: %1$f; y: %2$f%n\", point[0], point[1]));\n    }",
+        "class_methods": [
+            {
+                "method_name": "eulerStep",
+                "return_type": "double",
+                "parameters": "double xCurrent, double stepSize, double yCurrent, BiFunction<Double, Double, Double> differentialEquation",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static double eulerStep(double xCurrent, double stepSize, double yCurrent, BiFunction<Double, Double, Double> differentialEquation) {\n        if (stepSize <= 0) {\n            throw new IllegalArgumentException(\"stepSize should be greater than zero\");\n        }"
+            },
+            {
+                "method_name": "eulerFull",
+                "return_type": ">",
+                "parameters": "double xStart, double xEnd, double stepSize, double yStart, BiFunction<Double, Double, Double> differentialEquation",
+                "visibility": "default",
+                "is_static": false,
+                "original_code": "> eulerFull(double xStart, double xEnd, double stepSize, double yStart, BiFunction<Double, Double, Double> differentialEquation) {\n        if (xStart >= xEnd) {\n            throw new IllegalArgumentException(\"xEnd should be greater than xStart\");\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\EulerMethod.java",
+        "description": "方法名称：eulerFull  \n参数名称类型：double startX, double endX, double stepSize, double initialY, java.util.function.BiFunction<Double, Double, Double> differentialEquation  \n返回值类型：java.util.ArrayList<double[]>  \n核心逻辑：使用欧拉法数值求解常微分方程 dy/dx = f(x, y)。从初始点 (startX, initialY) 开始，以 stepSize 为步长迭代计算，直到 x 达到或超过 endX。每次迭代计算下一个点的 x 和 y 值：x_next = x_current + stepSize，y_next = y_current + stepSize * f(x_current, y_current)。将每个计算点的坐标 [x, y] 存入数组并添加到返回列表中。  \n是否是静态方法：是"
+    },
+    {
+        "id": 54,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "EvilNumber",
+        "is_interface": false,
+        "method_name": "isEvilNumber",
+        "parameters": "int number",
+        "return_type": "boolean",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"int\", \"name\": \"oneBitCounter\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"oneBitCounter\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"noOfOneBits\"}]",
+        "dependencies": [],
+        "original_code": "public static boolean isEvilNumber(int number) {\n        if (number < 0) {\n            throw new IllegalArgumentException(\"Negative numbers are not allowed.\");\n        }",
+        "class_methods": [
+            {
+                "method_name": "countOneBits",
+                "return_type": "int",
+                "parameters": "int number",
+                "visibility": "default",
+                "is_static": true,
+                "original_code": "static int countOneBits(int number) {\n        int oneBitCounter = 0;\n        while (number > 0) {\n            oneBitCounter += number & 1; // increment count if last bit is 1\n            number >>= 1; // right shift to next bit\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\EvilNumber.java",
+        "description": "方法名称：isEvilNumber  \n参数名称类型：int number  \n返回值类型：boolean  \n核心逻辑：判断输入的非负整数是否为邪恶数字（即其二进制表示中1的个数为偶数），若输入为负数则抛出IllegalArgumentException异常  \n是否是静态方法：是"
+    },
+    {
+        "id": 55,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "Factorial",
+        "is_interface": false,
+        "method_name": "factorial",
+        "parameters": "int n",
+        "return_type": "BigInteger",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"BigInteger\", \"name\": \"result\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"result\"}]",
+        "dependencies": [
+            "java.math.BigInteger"
+        ],
+        "original_code": "public static BigInteger factorial(int n) {\n        if (n < 0) {\n            throw new IllegalArgumentException(\"Input number cannot be negative\");\n        }",
+        "class_methods": [],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\Factorial.java",
+        "description": "方法名称：factorial  \n参数名称类型：int n  \n返回值类型：BigInteger  \n核心逻辑：计算非负整数n的阶乘，若输入n小于0则抛出IllegalArgumentException异常提示\"Input number cannot be negative\"，否则返回n的阶乘结果  \n是否是静态方法：是"
+    },
+    {
+        "id": 57,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "FastInverseSqrt",
+        "is_interface": false,
+        "method_name": "inverseSqrt",
+        "parameters": "float number",
+        "return_type": "boolean",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"float\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"float\", \"name\": \"xhalf\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"i\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"xhalf\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"i\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}]",
+        "dependencies": [],
+        "original_code": "public static boolean inverseSqrt(float number) {\n        float x = number;\n        float xhalf = 0.5f * x;\n        int i = Float.floatToIntBits(x);\n        i = 0x5f3759df - (i >> 1);\n        x = Float.intBitsToFloat(i);\n        x = x * (1.5f - xhalf * x * x);\n        return x == ((float) 1 / (float) Math.sqrt(number));\n    }",
+        "class_methods": [],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\FastInverseSqrt.java",
+        "description": "方法名称：inverseSqrt  \n参数名称类型：float number  \n返回值类型：boolean  \n核心逻辑：该方法使用快速平方根倒数算法（近似计算）对输入浮点数number进行处理，先通过位操作和魔数0x5f3759df得到一个近似的平方根倒数，再进行一次牛顿迭代优化，最后将计算结果与标准数学库计算的1除以平方根的结果进行相等性比较并返回比较结果。  \n是否是静态方法：是"
+    },
+    {
+        "id": 58,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "FastInverseSqrt",
+        "is_interface": false,
+        "method_name": "inverseSqrt",
+        "parameters": "double number",
+        "return_type": "boolean",
+        "fields": "[{\"visibility\": \"default\", \"type\": \"float\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"float\", \"name\": \"xhalf\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"i\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"xhalf\"}, {\"visibility\": \"default\", \"type\": \"long\", \"name\": \"i\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}]",
+        "dependencies": [],
+        "original_code": "public static boolean inverseSqrt(double number) {\n        double x = number;\n        double xhalf = 0.5d * x;\n        long i = Double.doubleToLongBits(x);\n        i = 0x5fe6ec85e7de30daL - (i >> 1);\n        x = Double.longBitsToDouble(i);\n        for (int it = 0; it < 4; it++) {\n            x = x * (1.5d - xhalf * x * x);\n        }",
+        "class_methods": [],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\FastInverseSqrt.java",
+        "description": "方法名称：inverseSqrt  \n参数名称类型：double number  \n返回值类型：boolean  \n核心逻辑：该方法通过位操作和牛顿迭代法快速计算一个双精度浮点数的平方根倒数近似值，并进行四次迭代优化精度，但最终返回一个布尔值，此逻辑与常见的平方根倒数计算功能不符，可能存在错误或未完整实现。  \n是否是静态方法：是"
+    },
+    {
+        "id": 64,
+        "package_name": "com.thealgorithms.maths",
+        "class_name": "FFT",
+        "is_interface": false,
+        "method_name": "multiply",
+        "parameters": "double n",
+        "return_type": "Complex",
+        "fields": "[{\"visibility\": \"private\", \"type\": \"double\", \"name\": \"real\"}, {\"visibility\": \"private\", \"type\": \"double\", \"name\": \"img\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"real\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"img\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"d\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"temp\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"real\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"img\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"n\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"log2n\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"direction\"}, {\"visibility\": \"default\", \"type\": \"double\", \"name\": \"angle\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"wlen\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"w\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"u\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"v\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"log2n\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"log2n\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"reverse\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"Complex\", \"name\": \"z\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"x\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"reversed\"}, {\"visibility\": \"default\", \"type\": \"return\", \"name\": \"reversed\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"n\"}, {\"visibility\": \"default\", \"type\": \"int\", \"name\": \"oldSize\"}]",
+        "dependencies": [
+            "java.util.Collections",
+            "java.util.Collection",
+            "java.util.ArrayList"
+        ],
+        "original_code": "public Complex multiply(double n) {\n            Complex temp = new Complex();\n            temp.real = this.real * n;\n            temp.img = this.img * n;\n            return temp;\n        }",
+        "class_methods": [
+            {
+                "method_name": "getReal",
+                "return_type": "double",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public double getReal() {\n            return real;\n        }"
+            },
+            {
+                "method_name": "getImaginary",
+                "return_type": "double",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public double getImaginary() {\n            return img;\n        }"
+            },
+            {
+                "method_name": "add",
+                "return_type": "Complex",
+                "parameters": "Complex z",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public Complex add(Complex z) {\n            Complex temp = new Complex();\n            temp.real = this.real + z.real;\n            temp.img = this.img + z.img;\n            return temp;\n        }"
+            },
+            {
+                "method_name": "subtract",
+                "return_type": "Complex",
+                "parameters": "Complex z",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public Complex subtract(Complex z) {\n            Complex temp = new Complex();\n            temp.real = this.real - z.real;\n            temp.img = this.img - z.img;\n            return temp;\n        }"
+            },
+            {
+                "method_name": "conjugate",
+                "return_type": "Complex",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public Complex conjugate() {\n            Complex temp = new Complex();\n            temp.real = this.real;\n            temp.img = -this.img;\n            return temp;\n        }"
+            },
+            {
+                "method_name": "abs",
+                "return_type": "double",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public double abs() {\n            return Math.hypot(this.real, this.img);\n        }"
+            },
+            {
+                "method_name": "divide",
+                "return_type": "Complex",
+                "parameters": "Complex z",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public Complex divide(Complex z) {\n            Complex temp = new Complex();\n            double d = z.abs() * z.abs();\n            d = (double) Math.round(d * 1000000000d) / 1000000000d;\n            temp.real = (this.real * z.real + this.img * z.img) / (d);\n            temp.img = (this.img * z.real - this.real * z.img) / (d);\n            return temp;\n        }"
+            },
+            {
+                "method_name": "divide",
+                "return_type": "Complex",
+                "parameters": "double n",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public Complex divide(double n) {\n            Complex temp = new Complex();\n            temp.real = this.real / n;\n            temp.img = this.img / n;\n            return temp;\n        }"
+            },
+            {
+                "method_name": "real",
+                "return_type": "double",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public double real() {\n            return real;\n        }"
+            },
+            {
+                "method_name": "imaginary",
+                "return_type": "double",
+                "parameters": "",
+                "visibility": "public",
+                "is_static": false,
+                "original_code": "public double imaginary() {\n            return img;\n        }"
+            },
+            {
+                "method_name": "fft",
+                "return_type": "ArrayList<Complex>",
+                "parameters": "ArrayList<Complex> x, boolean inverse",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static ArrayList<Complex> fft(ArrayList<Complex> x, boolean inverse) {\n        /* Pad the signal with zeros if necessary */\n        paddingPowerOfTwo(x);\n        int n = x.size();\n        int log2n = findLog2(n);\n        x = fftBitReversal(n, log2n, x);\n        int direction = inverse ? -1 : 1;\n\n        /* Main loop of the algorithm */\n        for (int len = 2; len <= n; len *= 2) {\n            double angle = -2 * Math.PI / len * direction;\n            Complex wlen = new Complex(Math.cos(angle), Math.sin(angle));\n            for (int i = 0; i < n; i += len) {\n                Complex w = new Complex(1, 0);\n                for (int j = 0; j < len / 2; j++) {\n                    Complex u = x.get(i + j);\n                    Complex v = w.multiply(x.get(i + j + len / 2));\n                    x.set(i + j, u.add(v));\n                    x.set(i + j + len / 2, u.subtract(v));\n                    w = w.multiply(wlen);\n                }"
+            },
+            {
+                "method_name": "findLog2",
+                "return_type": "int",
+                "parameters": "int n",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static int findLog2(int n) {\n        int log2n = 0;\n        while ((1 << log2n) < n) {\n            log2n++;\n        }"
+            },
+            {
+                "method_name": "fftBitReversal",
+                "return_type": "ArrayList<Complex>",
+                "parameters": "int n, int log2n, ArrayList<Complex> x",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static ArrayList<Complex> fftBitReversal(int n, int log2n, ArrayList<Complex> x) {\n        int reverse;\n        for (int i = 0; i < n; i++) {\n            reverse = reverseBits(i, log2n);\n            if (i < reverse) {\n                Collections.swap(x, i, reverse);\n            }"
+            },
+            {
+                "method_name": "inverseFFT",
+                "return_type": "ArrayList<Complex>",
+                "parameters": "int n, boolean inverse, ArrayList<Complex> x",
+                "visibility": "public",
+                "is_static": true,
+                "original_code": "public static ArrayList<Complex> inverseFFT(int n, boolean inverse, ArrayList<Complex> x) {\n        if (inverse) {\n            for (int i = 0; i < x.size(); i++) {\n                Complex z = x.get(i);\n                x.set(i, z.divide(n));\n            }"
+            },
+            {
+                "method_name": "reverseBits",
+                "return_type": "int",
+                "parameters": "int num, int log2n",
+                "visibility": "default",
+                "is_static": true,
+                "original_code": "static int reverseBits(int num, int log2n) {\n        int reversed = 0;\n        for (int i = 0; i < log2n; i++) {\n            if ((num & (1 << i)) != 0) {\n                reversed |= 1 << (log2n - 1 - i);\n            }"
+            },
+            {
+                "method_name": "paddingPowerOfTwo",
+                "return_type": "void",
+                "parameters": "Collection<Complex> x",
+                "visibility": "default",
+                "is_static": true,
+                "original_code": "static void paddingPowerOfTwo(Collection<Complex> x) {\n        int n = 1;\n        int oldSize = x.size();\n        while (n < oldSize) {\n            n *= 2;\n        }"
+            }
+        ],
+        "file_path": "D:\\MyProjects\\GraduationProject\\SmartTestGen\\test01\\TheAlgorithms-Java\\src\\main\\java\\com\\thealgorithms\\maths\\FFT.java",
+        "description": "方法名称：multiply  \n参数名称类型：double n  \n返回值类型：Complex  \n核心逻辑：创建一个新的Complex对象，将其real属性设置为当前对象的real属性乘以参数n，将其img属性设置为当前对象的img属性乘以参数n，返回新创建的Complex对象  \n是否是静态方法：否"
+    }
+]

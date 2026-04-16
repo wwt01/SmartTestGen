@@ -21,6 +21,8 @@ llm:
       ],
       "return_type": "string",
       "expectations": ["string"],
+      "database_dependency": boolean,
+      "is_static": boolean,
       "is_constructed": {{
         "method_name": boolean,
         "parameters": boolean,
@@ -35,6 +37,10 @@ llm:
     - Use standard Java types
     - Output valid JSON only
     - No explanations
+    - Set database_dependency to true if the requirement mentions database operations (e.g., "数据库中诗词的数量", "从数据库获取", "保存到数据库")
+    - Set database_dependency to false if no database operations are mentioned
+    - Set is_static to true if the requirement mentions the method is static (e.g., "静态方法", "static method", "直接通过类名调用")
+    - Set is_static to false if no static method information is mentioned
 
   # 主提示词模板：解析需求为结构化信息 - 用户输入部分（只包含需求文本）
   parse_requirement_user_prompt: |
@@ -51,21 +57,34 @@ llm:
     2. Include the package declaration at the top of the file if package information is provided
     3. Use appropriate imports (JUnit 5 annotations and assertions, and any other necessary imports for the class being tested)
     4. Generate test methods with descriptive names that reflect the test scenarios
-    5. Include setup and teardown methods if necessary
-    6. Use mocking for dependencies if needed
+    5. Do NOT use any setup (BeforeEach) or teardown methods
+    6. Use mocking for dependencies if needed, especially for database operations
     7. Generate assertions based on the expectations
     8. Follow Java naming conventions (test class name should be {class_name}Test)
     9. Make the code readable and well-structured
     10. Output only the Java code, no explanations
     11. IMPORTANT: In the test method, you MUST call the method {method_name} with appropriate test values based on the parameters and constraints
-    12. CRITICAL: Always use the actual class name extracted from the file context for creating instances and calling methods
-    13. CRITICAL: Do not create non-existent classes like 'TestClass'. Use the real class name from the file context
-    14. CRITICAL: For example, if the class name is 'Calculator', create an instance like 'private Calculator calculator = new Calculator();' and call methods like 'calculator.calculateSum(a, b);'
+    12. CRITICAL: Always use the actual class name extracted from the file context for calling methods
+    13. CRITICAL: If the method is static (is_static: true), call methods directly using the class name, like this: {class_name}.{method_name}(a, b);
+    14. CRITICAL: If the method is not static (is_static: false), create an instance of the class and call methods using the instance, like this:
+        - Declare instance field: private {class_name} instance;
+        - Create instance in setup method: instance = new {class_name}();
+        - Call method: instance.{method_name}(a, b);
+    15. CRITICAL: If the class has private constructors or is a utility class, still call methods with {class_name}.{method_name}() regardless of is_static value
+    20. CRITICAL: If the requirement mentions database operations (e.g., "数据库中诗词的数量"), you MUST:
+        - Add Mockito imports for mocking database dependencies
+        - Create mock instances for database-related dependencies
+        - Set up appropriate mock behavior (e.g., return a mock count for database queries)
+        - Adjust the assertion logic to include the database operation result
+        - Example: If the method returns sum of parameters plus database count, mock the database count and include it in the expected value
 
     # Class Context (Static Information)
     - Package: {package_name}
     - Class name: {class_name}
     - Class type: {class_type}
+    - Database dependency: {database_dependency}
+    - Is static method: {is_static}
+    - Has parameterized constructor: {has_parameterized_constructor}
     
     # Fields
     {fields}
@@ -73,32 +92,52 @@ llm:
     # Methods
     {methods}
     
+    # Constructors
+    {constructors}
+    
     # Dependencies
     {dependencies}
 
     # Example Output Format
+    
+    # For static methods (is_static: true):
     ```java
-    # If package information is provided:
-    package {{package_name}};
+    package {package_name};
+
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.*;
+
+    public class {class_name}Test {{
+        @Test
+        void test{MethodName}() {{
+            // Call static method directly using class name:
+            // {class_name}.{method_name}(parameters);
+            // Assertions here
+        }}
+    }}
+    ```
+    
+    # For non-static methods (is_static: false):
+    ```java
+    package {package_name};
 
     import org.junit.jupiter.api.BeforeEach;
     import org.junit.jupiter.api.Test;
     import static org.junit.jupiter.api.Assertions.*;
-    // Add any other necessary imports for the class being tested
 
-    public class {{class_name}}Test {{
-        private {{class_name}} instance;
+    public class {class_name}Test {{
+        private {class_name} instance;
 
         @BeforeEach
         void setUp() {{
-            instance = new {{class_name}}();
+            instance = new {class_name}();
         }}
 
         @Test
-        void test{{MethodName}}() {{
-            // Test setup
-            // Method call
-            // Assertions
+        void test{MethodName}() {{
+            // Call non-static method using instance:
+            // instance.{method_name}(parameters);
+            // Assertions here
         }}
     }}
     ```
@@ -110,6 +149,7 @@ llm:
     - Parameters: {parameters}
     - Return type: {return_type}
     - Expectations: {expectations}
+    - Is static method: {is_static}
 
     Generate the complete Java unit test code.
 
@@ -124,7 +164,7 @@ llm:
     3. Use appropriate imports (JUnit 5 annotations and assertions, and any other necessary imports for the class being tested)
     4. Generate test methods with descriptive names that reflect the test scenarios
     5. Include setup and teardown methods if necessary
-    6. Use mocking for dependencies if needed
+    6. Use mocking for dependencies if needed, especially for database operations
     7. Generate assertions based on the expectations
     8. Follow Java naming conventions (test class name should be {class_name}Test)
     9. Make the code readable and well-structured
@@ -138,11 +178,21 @@ llm:
     14. CRITICAL: INTERFACE EXAMPLE WITH IMPLEMENTATION: If the interface is 'Calculator' and you find an implementation 'CalculatorImpl', create an instance like 'private Calculator calculator = new CalculatorImpl();'
     15. CRITICAL: INTERFACE EXAMPLE WITHOUT IMPLEMENTATION: If the interface is 'Calculator' and no implementations are found, add Mockito import and create an instance like 'private Calculator calculator = Mockito.mock(Calculator.class);'
     16. CRITICAL: The test code should always use the interface type for the variable declaration while instantiating the concrete implementation if available.
+    17. CRITICAL: Always use the actual interface name extracted from the file context for variable declarations and method calls
+    18. CRITICAL: If the requirement mentions database operations (e.g., "数据库中诗词的数量"), you MUST:
+        - Add Mockito imports for mocking database dependencies
+        - Create mock instances for database-related dependencies
+        - Set up appropriate mock behavior (e.g., return a mock count for database queries)
+        - Adjust the assertion logic to include the database operation result
+        - Example: If the method returns sum of parameters plus database count, mock the database count and include it in the expected value
+    19. CRITICAL: Generate multiple test methods to cover different scenarios based on the parameters and constraints
+    20. CRITICAL: Include edge cases in your test methods (e.g., null values, empty collections, boundary values)
 
     # Class Context (Static Information)
     - Package: {package_name}
     - Interface name: {class_name}
     - Class type: {class_type}
+    - Database dependency: {database_dependency}
     
     # Fields
     {fields}
@@ -154,33 +204,75 @@ llm:
     {dependencies}
 
     # Example Output Format
+    
+    # For interfaces with implementations:
     ```java
-    # If package information is provided:
-    package {{package_name}};
+    package {package_name};
 
     import org.junit.jupiter.api.BeforeEach;
     import org.junit.jupiter.api.Test;
     import static org.junit.jupiter.api.Assertions.*;
-    // Add any other necessary imports for the class being tested
+    // Add any other necessary imports for the implementation class
 
-    public class {{class_name}}Test {{
-        private {{class_name}} instance;
+    public class {class_name}Test {{
+        private {class_name} instance;
 
         @BeforeEach
         void setUp() {{
-            // For interfaces with implementations:
-            // instance = new {{class_name}}Impl(); // Use the actual implementation class
-            
-            // For interfaces without implementations (using Mockito):
-            // import org.mockito.Mockito;
-            // instance = Mockito.mock({{class_name}}.class);
+            // Use the actual implementation class found in the code structure
+            instance = new {class_name}Impl(); // Replace with actual implementation class name
         }}
 
         @Test
-        void test{{MethodName}}() {{
+        void test{MethodName}() {{
+            // Test setup with appropriate test values
+            // Method call using interface instance
+            // Assertions based on expectations
+        }}
+
+        @Test
+        void test{MethodName}_EdgeCase() {{
+            // Test edge case scenario
+            // Method call with edge case values
+            // Assertions
+        }}
+    }}
+    ```
+    
+    # For interfaces without implementations (using Mockito):
+    ```java
+    package {package_name};
+
+    import org.junit.jupiter.api.BeforeEach;
+    import org.junit.jupiter.api.Test;
+    import static org.junit.jupiter.api.Assertions.*;
+    import org.mockito.Mockito;
+
+    public class {class_name}Test {{
+        private {class_name} instance;
+
+        @BeforeEach
+        void setUp() {{
+            // Create mock instance using Mockito
+            instance = Mockito.mock({class_name}.class);
+        }}
+
+        @Test
+        void test{MethodName}() {{
             // Test setup
+            // Set up mock behavior if needed
+            // Mockito.when(instance.{method_name}(parameters)).thenReturn(expectedValue);
+            
             // Method call
             // Assertions
+        }}
+
+        @Test
+        void test{MethodName}_ErrorHandling() {{
+            // Test error handling scenario
+            // Set up mock to throw exception if needed
+            // Method call
+            // Assertions for exception handling
         }}
     }}
     ```
@@ -192,6 +284,7 @@ llm:
     - Parameters: {parameters}
     - Return type: {return_type}
     - Expectations: {expectations}
+    - Is static method: {is_static}
 
     Generate the complete Java unit test code.
 
@@ -199,22 +292,32 @@ llm:
   # 系统提示词（简化版本，只关注编译错误修复）
   fix_compilation_error_system_prompt: |
     You are an expert in Java development, debugging, and JUnit 5. 
-    Your ONLY task is to FIX COMPILATION ERRORS in the given test code according to the error message. 
+    Your ONLY task is to FIX COMPILATION ERRORS in the given test code according to the error message and the provided source code information. 
     DO NOT modify, add, or delete any business logic. 
     DO NOT replace or rewrite test methods. 
     DO NOT add new test methods. 
     KEEP ALL original methods and functionality UNCHANGED. 
 
+    # Static Context
+    {static_context}
+
     # Requirements 
-    1. Carefully analyze only the provided compilation error message. 
-    2. Fix ONLY syntax, import, declaration, and symbol errors. 
-    3. Preserve 100% of the original test logic. 
-    4. Keep all original test methods, parameters, and assertions. 
-    5. Add necessary imports if missing. 
-    6. Return the complete fixed test code. 
-    7. DO NOT include any explanations, comments, or extra text. 
-    8. Follow standard Java formatting. 
-    9. Use correct JUnit 5 annotations. 
+    1. Focus on analyzing and fixing the test file code based on the provided source code information and compilation error message.
+    2. Carefully analyze the compilation error message to locate the exact position of the error in the test code.
+    3. Refer to the source code information to ensure that the test code is consistent with the source code in terms of method signatures, parameter types, return types, etc.
+    4. Fix only syntax, import, declaration, and symbol errors; do not modify any business logic.
+    5. Preserve 100% of the original test logic, including all test methods, parameters, and assertions.
+    6. Add necessary imports if missing.
+    7. Return the complete fixed test code.
+    8. Do not include any explanations, comments, or extra text.
+    9. Follow standard Java formatting.
+    10. Use correct JUnit 5 annotations.
+    11. If the error indicates the class constructor is private, or constructor not found, or cannot instantiate the class;
+    COMPLETELY REMOVE ALL object instantiation (new Xxx() ),
+    AND ALWAYS invoke methods using the class name directly: ClassName.methodName();
+    DO NOT use any object instance calls.
+    THIS APPLIES TO ALL METHODS, NO EXCEPTIONS.
+    12. Strictly follow the error message to trace the error source in the test code, analyze field and method information in the context when necessary, determine if an undefined method is being used, and if the method exists in the static context, there is no need to redefine it.
 
     # Common Compilation Errors to Fix 
     - Missing semicolons 
@@ -222,7 +325,7 @@ llm:
     - Illegal package declaration 
     - Missing braces, parentheses 
     - Undefined symbols 
-    - Type mismatches 
+    - Type mismatched 
     - Incorrect method signatures 
     - Unresolved variables 
 
@@ -235,5 +338,8 @@ llm:
 
     # Compilation Error Message
     {error_message}
+
+    # Method Source
+    {method_source}
 
     Generate the complete fixed test code with all compilation errors resolved.

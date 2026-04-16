@@ -13,8 +13,11 @@ import com.smarttestgen.ideaplugin.toolwindow.components.InfoPanel;
 import com.smarttestgen.ideaplugin.toolwindow.components.StructuredResultPanel;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.VirtualFile;
 
 import javax.swing.*;
 import java.awt.*;
@@ -184,6 +187,9 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
             codeEditorPanel.setTestCode(testCodeHint);
             codeEditorPanel.setEmptyMethodCode(emptyMethodHint);
             
+            // 重置编译结果文本框
+            codeEditorPanel.setCompilationResult(false, "No compilation result yet. Click 'Pre-compile' to check.");
+            
             generatedEmptyMethodCode = null;
         }
     }
@@ -340,6 +346,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
         String returnType = structuredResultPanel.getReturnType();
         String expectationsStr = structuredResultPanel.getExpectations();
         String parametersStr = structuredResultPanel.buildParametersJson();
+        boolean isStatic = structuredResultPanel.isStaticMethod();
         
         System.out.println("[Test Case Generator] Method Name: " + methodName);
         System.out.println("[Test Case Generator] Return Type: " + returnType);
@@ -365,6 +372,7 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
                 returnType,
                 parametersStr,
                 expectationsStr,
+                isStatic,
                 result -> {
                     loadingDialog.dispose();
                     
@@ -724,13 +732,53 @@ public class TestGeneratorToolWindowPanel extends JPanel implements StructuredRe
      * @return 请求体
      */
     private String buildFixCompilationErrorRequest(String code, String errorMessage, String sessionId) {
+        // 获取当前文件的源码和空方法
+        String methodSource = getMethodSource();
+        
         StringBuilder requestBody = new StringBuilder();
         requestBody.append("{");
         requestBody.append("\"code\":\"").append(escapeContent(code)).append("\",");
         requestBody.append("\"error_message\":\"").append(escapeContent(errorMessage)).append("\",");
-        requestBody.append("\"session_id\":\"").append(escapeContent(sessionId)).append("\"");
+        requestBody.append("\"session_id\":\"").append(escapeContent(sessionId)).append("\",");
+        requestBody.append("\"method_source\":\"").append(escapeContent(methodSource)).append("\"");
         requestBody.append("}");
         return requestBody.toString();
+    }
+    
+    /**
+     * 获取方法源码，直接返回当前文件的内容
+     * @return 方法源码
+     */
+    private String getMethodSource() {
+        // 直接获取当前文件的源码，不再添加空方法
+        return getCurrentFileContent();
+    }
+    
+    /**
+     * 获取当前文件的内容
+     * @return 文件内容
+     */
+    private String getCurrentFileContent() {
+        Project[] projects = ProjectManager.getInstance().getOpenProjects();
+        if (projects.length == 0) {
+            return "No information available yet.";
+        }
+        
+        Project project = projects[0];
+        FileEditorManager fileEditorManager = FileEditorManager.getInstance(project);
+        VirtualFile[] selectedFiles = fileEditorManager.getSelectedFiles();
+        
+        if (selectedFiles.length == 0) {
+            return "No information available yet.";
+        }
+        
+        VirtualFile currentFile = selectedFiles[0];
+        try {
+            return new String(currentFile.contentsToByteArray(), "UTF-8");
+        } catch (Exception e) {
+            System.out.println("[Test Case Generator] Error reading current file: " + e.getMessage());
+            return "No information available yet.";
+        }
     }
     
     /**

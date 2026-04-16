@@ -44,7 +44,9 @@ class ExcelManager:
         "fix_success_3",
         "fix_time_3",
         "final_success",
-        "total_fix_count"
+        "total_fix_count",
+        "run_success",
+        "coverage"
     ]
 
     def __init__(self, file_path: str):
@@ -159,7 +161,9 @@ class ExcelManager:
             "fix_success_3": 15,
             "fix_time_3": 15,
             "final_success": 15,
-            "total_fix_count": 18
+            "total_fix_count": 18,
+            "run_success": 15,
+            "coverage": 15
         }
 
         for col, header in enumerate(self.HEADERS, 1):

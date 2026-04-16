@@ -36,6 +36,9 @@ class CompilationUtil:
             (JUNIT_PLATFORM_COMMON_URL, "junit-platform-commons-1.10.0.jar"),
             (OPENTEST4J_URL, "opentest4j-1.3.0.jar"),
             (APIGUARDIAN_URL, "apiguardian-api-1.1.2.jar"),
+            # 添加其他常用依赖
+            ("https://repo1.maven.org/maven2/org/mockito/mockito-core/4.11.0/mockito-core-4.11.0.jar", "mockito-core-4.11.0.jar"),
+            ("https://repo1.maven.org/maven2/org/assertj/assertj-core/3.24.2/assertj-core-3.24.2.jar", "assertj-core-3.24.2.jar"),
         ]
 
         jar_paths = []
